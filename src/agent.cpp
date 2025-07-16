@@ -70,10 +70,11 @@ int main(){
         }
         std::string target = sanitize(req.get_param_value("target"));
         char cmd[1024];
-        sprintf(cmd, "traceroute -w 1 -N 100 %s",target.c_str());
+        sprintf(cmd, "traceroute -w 1 -N 100 %s 2>&1",target.c_str());
         std::string cmdres = exec_command(cmd);
         std::string jsonres = res_to_json(cmdres);
-        // WriteLog(writer.write(root));
+        
+        WriteLog("Traceroute "+target);
 
         res.set_content(jsonres.c_str(), "application/json");
 
@@ -86,9 +87,11 @@ int main(){
         }
         std::string target = sanitize(req.get_param_value("target"));
         char cmd[1024];
-        sprintf(cmd, "ping -i 0.01 -c 4 -W 1 %s",target.c_str());
+        sprintf(cmd, "ping -i 0.01 -c 4 -W 1 %s 2>&1",target.c_str());
         std::string cmdres = exec_command(cmd);
         std::string jsonres = res_to_json(cmdres);
+        
+        WriteLog("Ping "+target);
 
         res.set_content(jsonres.c_str(), "application/json");
 
@@ -102,9 +105,11 @@ int main(){
         std::string host = sanitize(req.get_param_value("host"));
         std::string port = sanitize(req.get_param_value("port"));
         char cmd[1024];
-        sprintf(cmd, "tcping -x 4 %s %s",host.c_str(),port.c_str());
+        sprintf(cmd, "tcping -x 4 %s %s 2>&1",host.c_str(),port.c_str());
         std::string cmdres = exec_command(cmd);
         std::string jsonres = res_to_json(cmdres);
+
+        WriteLog("TCPing "+host+":"+port);
 
         res.set_content(jsonres.c_str(), "application/json");
 
@@ -117,10 +122,12 @@ int main(){
         }
         std::string target = sanitize(req.get_param_value("target"));
         char cmd[1024];
-        sprintf(cmd, "birdc show route for %s",target.c_str());
+        sprintf(cmd, "birdc show route for %s 2>&1",target.c_str());
 
         std::string cmdres = exec_command(cmd);
         std::string jsonres = res_to_json(cmdres);
+
+        WriteLog("Show route for "+target);
 
         res.set_content(jsonres.c_str(), "application/json");
 

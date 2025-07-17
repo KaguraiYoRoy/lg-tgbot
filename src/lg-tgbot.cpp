@@ -33,17 +33,18 @@ int main(){
 
     bot.getEvents().onCommand("ping", [&](TgBot::Message::Ptr message){
         std::string resstr = "";
-        for(int i=0;i<configRoot["nodes"].size();i++){
+        
+        std::istringstream messageParser(message->text);
+        std::string msgparams[16];
+        short msgparamsCount=0;
+        while(messageParser>>msgparams[msgparamsCount])msgparamsCount++;
+
+        std::string params="/ping?target="+msgparams[1];
+
+        for(unsigned int i=0;i<configRoot["nodes"].size();i++){
             resstr+="Node: "+configRoot["nodes"][i]["name"].asString()+"\n";
             std::string weburl=configRoot["nodes"][i]["url"].asString();
             httplib::Client cli(weburl.c_str());
-
-            std::istringstream messageParser(message->text);
-            std::string msgparams[16];
-            short msgparamsCount=0;
-            while(messageParser>>msgparams[msgparamsCount])msgparamsCount++;
-
-            std::string params="/ping?target="+msgparams[1];
 
             if(debugmode)resstr+="Debug info:\n"+weburl+params+"\n";
 
@@ -58,25 +59,31 @@ int main(){
                     resstr+="Test failed.\nCannot parse result.\n";
                 else resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
             }
-
-            std::cout<<"Ping target: "+msgparams[1]<<std::endl;
         }
+
+        printf("User %li[%s %s] required: Ping target: %s\n",
+            message->from->id,
+            message->from->firstName.c_str(),message->from->lastName.c_str(),
+            msgparams[1].c_str()
+        );
+
         bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
     });
     
     bot.getEvents().onCommand("trace", [&](TgBot::Message::Ptr message){
         std::string resstr = "";
-        for(int i=0;i<configRoot["nodes"].size();i++){
+        
+        std::istringstream messageParser(message->text);
+        std::string msgparams[16];
+        short msgparamsCount=0;
+        while(messageParser>>msgparams[msgparamsCount])msgparamsCount++;
+
+        std::string params="/trace?target="+msgparams[1];
+
+        for(unsigned int i=0;i<configRoot["nodes"].size();i++){
             resstr+="Node: "+configRoot["nodes"][i]["name"].asString()+"\n";
             std::string weburl=configRoot["nodes"][i]["url"].asString();
             httplib::Client cli(weburl.c_str());
-
-            std::istringstream messageParser(message->text);
-            std::string msgparams[16];
-            short msgparamsCount=0;
-            while(messageParser>>msgparams[msgparamsCount])msgparamsCount++;
-
-            std::string params="/trace?target="+msgparams[1];
 
             if(debugmode)resstr+="Debug info:\n"+weburl+params+"\n";
 
@@ -91,26 +98,32 @@ int main(){
                     resstr+="Test failed.\nCannot parse result.\n";
                 else resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
             }
-            
-            std::cout<<"Trace target: "+msgparams[1]<<std::endl;
         }
+
+        printf("User %li[%s %s] required: Traceroute target: %s\n",
+            message->from->id,
+            message->from->firstName.c_str(),message->from->lastName.c_str(),
+            msgparams[1].c_str()
+        );
+        
         bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
     });
 
     
     bot.getEvents().onCommand("tcping", [&](TgBot::Message::Ptr message){
         std::string resstr = "";
-        for(int i=0;i<configRoot["nodes"].size();i++){
+
+        std::istringstream messageParser(message->text);
+        std::string msgparams[16];
+        short msgparamsCount=0;
+        while(messageParser>>msgparams[msgparamsCount])msgparamsCount++;
+
+        std::string params="/tcping?host="+msgparams[1]+"&port="+msgparams[2];
+
+        for(unsigned int i=0;i<configRoot["nodes"].size();i++){
             resstr+="Node: "+configRoot["nodes"][i]["name"].asString()+"\n";
             std::string weburl=configRoot["nodes"][i]["url"].asString();
             httplib::Client cli(weburl.c_str());
-
-            std::istringstream messageParser(message->text);
-            std::string msgparams[16];
-            short msgparamsCount=0;
-            while(messageParser>>msgparams[msgparamsCount])msgparamsCount++;
-
-            std::string params="/tcping?host="+msgparams[1]+"&port="+msgparams[2];
 
             if(debugmode)resstr+="Debug info:\n"+weburl+params+"\n";
 
@@ -125,25 +138,31 @@ int main(){
                     resstr+="Test failed.\nCannot parse result.\n";
                 else resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
             }
-            
-            std::cout<<"Tcping target: "+msgparams[1]+":"+msgparams[2]<<std::endl;
         }
+
+        printf("User %li[%s %s] required: TCPing target: %s:%s\n",
+            message->from->id,
+            message->from->firstName.c_str(),message->from->lastName.c_str(),
+            msgparams[1].c_str(),msgparams[2].c_str()
+        );
+        
         bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
     });
     
     bot.getEvents().onCommand("route", [&](TgBot::Message::Ptr message){
         std::string resstr = "";
-        for(int i=0;i<configRoot["nodes"].size();i++){
+
+        std::istringstream messageParser(message->text);
+        std::string msgparams[16];
+        short msgparamsCount=0;
+        while(messageParser>>msgparams[msgparamsCount])msgparamsCount++;
+
+        std::string params="/route?target="+msgparams[1];
+
+        for(unsigned int i=0;i<configRoot["nodes"].size();i++){
             resstr+="Node: "+configRoot["nodes"][i]["name"].asString()+"\n";
             std::string weburl=configRoot["nodes"][i]["url"].asString();
             httplib::Client cli(weburl.c_str());
-
-            std::istringstream messageParser(message->text);
-            std::string msgparams[16];
-            short msgparamsCount=0;
-            while(messageParser>>msgparams[msgparamsCount])msgparamsCount++;
-
-            std::string params="/route?target="+msgparams[1];
 
             if(debugmode)resstr+="Debug info:\n"+weburl+params+"\n";
 
@@ -158,9 +177,14 @@ int main(){
                     resstr+="Test failed.\nCannot parse result.\n";
                 else resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
             }
-            
-            std::cout<<"Get route for target: "+msgparams[1]<<std::endl;
         }
+            
+        printf("User %li[%s %s] required: Get route for target: %s\n",
+            message->from->id,
+            message->from->firstName.c_str(),message->from->lastName.c_str(),
+            msgparams[1].c_str()
+        );
+        
         bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
     });
 

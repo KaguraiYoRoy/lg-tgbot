@@ -3,6 +3,8 @@
 #include <cstdio>
 #include <string>
 #include <regex>
+#include <iostream>
+#include <fstream>
 
 void WriteLog(const std::string log){
     using sc = std::chrono::system_clock;
@@ -11,6 +13,40 @@ void WriteLog(const std::string log){
     strftime(timebuf, 20, "%Y.%m.%d-%H:%M:%S", localtime(&t));
     std::cout<<timebuf<<": "<<log<<'\n';
     return;
+}
+
+std::string generate_uuid_v4() {
+    // 用于生成随机字节的随机数引擎和分布
+    std::random_device rd;
+    std::mt19937_64 gen(rd());
+    std::uniform_int_distribution<uint16_t> dis(0, 255);
+    
+    // 存储16个随机字节 (128位)
+    std::array<uint8_t, 16> bytes;
+    for (auto& byte : bytes) {
+        byte = static_cast<uint8_t>(dis(gen));
+    }
+    
+    // 设置UUID版本 (第7字节高4位为4)
+    bytes[6] = (bytes[6] & 0x0F) | 0x40;  // 0100xxxx
+    
+    // 设置变体 (第9字节高2位为10)
+    bytes[8] = (bytes[8] & 0x3F) | 0x80;  // 10xxxxxx
+    
+    // 将字节转换为十六进制字符串
+    std::ostringstream oss;
+    oss << std::hex << std::setfill('0');
+    
+    // 按UUID格式输出
+    for (size_t i = 0; i < 16; ++i) {
+        // 在指定位置插入分隔符
+        if (i == 4 || i == 6 || i == 8 || i == 10) {
+            oss << '-';
+        }
+        oss << std::setw(2) << static_cast<unsigned>(bytes[i]);
+    }
+    
+    return oss.str();
 }
 
 std::string sanitize(const std::string& args){
@@ -60,12 +96,52 @@ std::string res_to_json(std::string cmdres){
 }
 
 int main(){
+    Json::Value configRoot;
+    Json::Reader configReader;
+    Json::FastWriter configWriter;
+    std::ifstream configReadFile("config.json");
+    std::string uuid;
+    std::string bind;
+    unsigned short port=0;
+    if(!configReadFile 
+        || !configReader.parse(configReadFile,configRoot)
+        || !configRoot.isMember("uuid")
+    ){
+        uuid=generate_uuid_v4();
+        configRoot["uuid"]=uuid;
+        WriteLog("No UUID found. Generated: "+uuid);
+    }
+    else
+        uuid=configRoot["uuid"].asString();
+    WriteLog("Using uuid: "+uuid);
+
+    if(!configRoot.isMember("bind")){
+        WriteLog("No bind address defined. Using default: 0.0.0.0");
+        configRoot["bind"]="0.0.0.0";
+    }
+    bind=configRoot["bind"].asString();
+    WriteLog("Using bind address: "+bind);
     
+    if(!configRoot.isMember("port")){
+        WriteLog("No port defined. Using default: 8080");
+        configRoot["port"]=8080;
+    }
+    WriteLog("Using port: "+configRoot["port"].asString());
+    port=configRoot["port"].asUInt();
+
+    std::ofstream configWriteFile("config.json");
+    configWriteFile<<configWriter.write(configRoot);
+    configWriteFile.close();
+
     httplib::Server svr;
 
-    svr.Get("/trace", [](const httplib::Request &req, httplib::Response &res) {
-        if (!req.has_param("target")) {
+    svr.Get("/trace", [&](const httplib::Request &req, httplib::Response &res) {
+        if (!req.has_param("target") || !req.has_param("uuid")) {
             res.status = 400; // Bad Request
+            return;
+        }
+        if(req.get_param_value("uuid") != uuid.c_str()){
+            res.status = 401;
             return;
         }
         std::string target = sanitize(req.get_param_value("target"));
@@ -80,9 +156,13 @@ int main(){
 
     });
 
-    svr.Get("/ping", [](const httplib::Request &req, httplib::Response &res) {
-        if (!req.has_param("target")) {
+    svr.Get("/ping", [&](const httplib::Request &req, httplib::Response &res) {
+        if (!req.has_param("target") || !req.has_param("uuid")) {
             res.status = 400; // Bad Request
+            return;
+        }
+        if(req.get_param_value("uuid") != uuid.c_str()){
+            res.status = 401;
             return;
         }
         std::string target = sanitize(req.get_param_value("target"));
@@ -97,9 +177,13 @@ int main(){
 
     });
 
-    svr.Get("/tcping", [](const httplib::Request &req, httplib::Response &res) {
-        if (!req.has_param("host") || !req.has_param("port")) {
+    svr.Get("/tcping", [&](const httplib::Request &req, httplib::Response &res) {
+        if (!req.has_param("host") || !req.has_param("port") || !req.has_param("uuid")) {
             res.status = 400; // Bad Request
+            return;
+        }
+        if(req.get_param_value("uuid") != uuid.c_str()){
+            res.status = 401;
             return;
         }
         std::string host = sanitize(req.get_param_value("host"));
@@ -115,9 +199,13 @@ int main(){
 
     });
 
-    svr.Get("/route", [](const httplib::Request &req, httplib::Response &res) {
-        if (!req.has_param("target")) {
+    svr.Get("/route", [&](const httplib::Request &req, httplib::Response &res) {
+        if (!req.has_param("target") || !req.has_param("uuid")) {
             res.status = 400; // Bad Request
+            return;
+        }
+        if(req.get_param_value("uuid") != uuid.c_str()){
+            res.status = 401;
             return;
         }
         std::string target = sanitize(req.get_param_value("target"));
@@ -133,7 +221,7 @@ int main(){
 
     });
 
-    svr.listen("0.0.0.0", 8080);
+    svr.listen(bind.c_str(), port);
 
     return 0;
 }

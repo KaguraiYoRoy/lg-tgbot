@@ -28,7 +28,7 @@ int main(){
 
     TgBot::Bot bot(token);
     bot.getEvents().onCommand("start", [&bot](TgBot::Message::Ptr message) {
-        bot.getApi().sendMessage(message->chat->id, "Manual:\n");
+        bot.getApi().sendMessage(message->chat->id, "Manual:\n/ping <host>: Ping target host\n/tcping <host> <port>: TCPing host:port\n/trace <host>: Traceroute target host\n/route <host>: Get route for target host\n");
     });
 
     bot.getEvents().onCommand("ping", [&](TgBot::Message::Ptr message){
@@ -58,6 +58,8 @@ int main(){
                     resstr+="Test failed.\nCannot parse result.\n";
                 else resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
             }
+
+            std::cout<<"Ping target: "+msgparams[1]<<std::endl;
         }
         bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
     });
@@ -89,6 +91,8 @@ int main(){
                     resstr+="Test failed.\nCannot parse result.\n";
                 else resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
             }
+            
+            std::cout<<"Trace target: "+msgparams[1]<<std::endl;
         }
         bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
     });
@@ -121,6 +125,8 @@ int main(){
                     resstr+="Test failed.\nCannot parse result.\n";
                 else resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
             }
+            
+            std::cout<<"Tcping target: "+msgparams[1]+":"+msgparams[2]<<std::endl;
         }
         bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
     });
@@ -152,6 +158,8 @@ int main(){
                     resstr+="Test failed.\nCannot parse result.\n";
                 else resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
             }
+            
+            std::cout<<"Get route for target: "+msgparams[1]<<std::endl;
         }
         bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
     });
@@ -174,8 +182,8 @@ int main(){
         bot.getApi().deleteWebhook();
 
         TgBot::TgLongPoll longPoll(bot);
+        printf("Long poll started\n");
         while (true) {
-            printf("Long poll started\n");
             longPoll.start();
         }
     } catch (std::exception& e) {

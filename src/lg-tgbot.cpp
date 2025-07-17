@@ -50,7 +50,7 @@ int main(){
 
             auto res = cli.Get(params.c_str());
             if(res->status!=httplib::StatusCode::OK_200){
-                resstr+="Test failed.\nServer returned an unknown status.\n";
+                resstr+="Test failed.\nServer returned an error.\n";
             }
             else {
                 Json::Reader resReader;
@@ -89,7 +89,7 @@ int main(){
 
             auto res = cli.Get(params.c_str());
             if(res->status!=httplib::StatusCode::OK_200){
-                resstr+="Test failed.\nServer returned an unknown status.\n";
+                resstr+="Test failed.\nServer returned an error.\n";
             }
             else {
                 Json::Reader resReader;
@@ -129,7 +129,7 @@ int main(){
 
             auto res = cli.Get(params.c_str());
             if(res->status!=httplib::StatusCode::OK_200){
-                resstr+="Test failed.\nServer returned an unknown status.\n";
+                resstr+="Test failed.\nServer returned an error.\n";
             }
             else {
                 Json::Reader resReader;
@@ -168,7 +168,7 @@ int main(){
 
             auto res = cli.Get(params.c_str());
             if(res->status!=httplib::StatusCode::OK_200){
-                resstr+="Test failed.\nServer returned an unknown status.\n";
+                resstr+="Test failed.\nServer returned an error.\n";
             }
             else {
                 Json::Reader resReader;

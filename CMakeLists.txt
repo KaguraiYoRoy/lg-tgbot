@@ -62,8 +62,6 @@ set(LIBJSONCPP_SRC_LIST
     src/json/json_writer.cpp
 )
 
-add_compile_options(-Wsign-compare)
-
 add_library(tgbot ${LIBTGBOT_SRC_LIST})
 add_library(jsoncpp ${LIBJSONCPP_SRC_LIST})
 

@@ -6,6 +6,12 @@
 #include <tgbot/tgbot.h>
 #include <json/json.h>
 #include <httplib.h>
+#include <Log.h>
+
+#define DEFAULT_LOGLEVEL_P LEVEL_WARN
+#define DEFAULT_LOGLEVEL_W LEVEL_ERROR
+
+Log mLog;
 
 int main(){
     Json::Value configRoot;
@@ -13,24 +19,29 @@ int main(){
     std::ifstream fileReader("config.json");
 
     if(!fileReader){
-        std::cout<<"Error: No config file found"<<std::endl;
+        mLog.push(LEVEL_FATAL,"No config file found!");
         return 1;
     }
 
     if (!configReader.parse(fileReader, configRoot)) {
-        std::cout<<"Error: Config invalid"<<std::endl;
+        mLog.push(LEVEL_FATAL,"Config invalid!");
         return 1;
     }
 
+    mLog.set_level(
+        configRoot.isMember("loglevel-print")&&configRoot["loglevel-print"].isInt()?configRoot["loglevel-print"].asInt():DEFAULT_LOGLEVEL_P,
+        configRoot.isMember("loglevel-write")&&configRoot["loglevel-write"].isInt()?configRoot["loglevel-write"].asInt():DEFAULT_LOGLEVEL_W
+    );
+    mLog.open("master.log");
+
     std::string token(configRoot["token"].asCString());
-    printf("Token: %s\n", token.c_str());
-    const bool debugmode=(configRoot.isMember("debug")&&configRoot["debug"].isBool())?configRoot["debug"].asBool():false;
+    mLog.push(LEVEL_INFO,"Token: %s",token.c_str());
 
     for(unsigned int i=0;i<configRoot["nodes"].size();i++){
         if(!configRoot["nodes"][i].isMember("uuid") || !configRoot["nodes"][i]["uuid"].isString()){
             if(!configRoot["nodes"][i].isMember("name") || !configRoot["nodes"][i]["name"].isString())
-                printf("Config parse error: Node %s does not have UUID!\n",configRoot["nodes"][i]["name"].asCString());
-            else printf("Config parse error: Node %d does not have UUID!\n",i);
+                mLog.push(LEVEL_FATAL,"Config parse error: Node %s does not have UUID!",configRoot["nodes"][i]["name"].asCString());
+            else mLog.push(LEVEL_FATAL,"Config parse error: Node %d does not have UUID!",i);
             return 1;
         }
     }
@@ -50,31 +61,45 @@ int main(){
 
         std::string params="/ping?target="+msgparams[1];
 
-        for(unsigned int i=0;i<configRoot["nodes"].size();i++){
-            resstr+="Node: "+configRoot["nodes"][i]["name"].asString()+"\n";
-            std::string weburl=configRoot["nodes"][i]["url"].asString();
-            httplib::Client cli(weburl.c_str());
-        
-            if(debugmode)resstr+="Debug info:\n"+weburl+params+"\n";
-
-            auto res = cli.Get(((std::string)(params+"&uuid="+configRoot["nodes"][i]["uuid"].asString())).c_str());
-            if(res->status!=httplib::StatusCode::OK_200){
-                resstr+="Test failed.\nServer returned an error.\n";
-            }
-            else {
-                Json::Reader resReader;
-                Json::Value resRoot;
-                if(!resReader.parse(res->body,resRoot))
-                    resstr+="Test failed.\nCannot parse result.\n";
-                else resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
-            }
-        }
-
-        printf("User %li[%s %s] required: Ping target: %s\n",
+        mLog.push(LEVEL_INFO,"User %li[%s %s] required: Ping target: %s",
             message->from->id,
             message->from->firstName.c_str(),message->from->lastName.c_str(),
             msgparams[1].c_str()
         );
+
+        for(unsigned int i=0;i<configRoot["nodes"].size();i++){
+            resstr+="Node: "+configRoot["nodes"][i]["name"].asString()+"\n";
+            std::string weburl=configRoot["nodes"][i]["url"].asString();
+            httplib::Client cli(weburl.c_str());
+
+            auto res = cli.Get(((std::string)(params+"&uuid="+configRoot["nodes"][i]["uuid"].asString())).c_str());
+            if(res->status!=httplib::StatusCode::OK_200){
+                resstr+="Test failed.\nServer returned an error.\n";
+                mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
+                    configRoot["nodes"][i]["name"].asCString(),
+                    httplib::to_string(res.error())
+                );
+            }
+            else {
+                Json::Reader resReader;
+                Json::Value resRoot;
+                if(!resReader.parse(res->body,resRoot)){
+                    resstr+="Test failed.\nCannot parse result.\n";
+                    mLog.push(LEVEL_ERROR,"Failed to parse result from node: %s.",
+                        configRoot["nodes"][i]["name"].asCString()
+                    );
+                }
+                else {
+                    resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
+                    mLog.push(LEVEL_VERBOSE,"Ping from %s to %s success.",
+                        configRoot["nodes"][i]["name"].asCString(),
+                        msgparams[1].c_str()
+                    );
+                }
+            }
+        }
+
+        mLog.push(LEVEL_INFO,"Ping finish.");
 
         bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
     });
@@ -89,31 +114,45 @@ int main(){
 
         std::string params="/trace?target="+msgparams[1];
 
+        mLog.push(LEVEL_INFO,"User %li[%s %s] required: Traceroute target: %s",
+            message->from->id,
+            message->from->firstName.c_str(),message->from->lastName.c_str(),
+            msgparams[1].c_str()
+        );
+
         for(unsigned int i=0;i<configRoot["nodes"].size();i++){
             resstr+="Node: "+configRoot["nodes"][i]["name"].asString()+"\n";
             std::string weburl=configRoot["nodes"][i]["url"].asString();
             httplib::Client cli(weburl.c_str());
 
-            if(debugmode)resstr+="Debug info:\n"+weburl+params+"\n";
-
             auto res = cli.Get(((std::string)(params+"&uuid="+configRoot["nodes"][i]["uuid"].asString())).c_str());
             if(res->status!=httplib::StatusCode::OK_200){
                 resstr+="Test failed.\nServer returned an error.\n";
+                mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
+                    configRoot["nodes"][i]["name"].asCString(),
+                    httplib::to_string(res.error())
+                );
             }
             else {
                 Json::Reader resReader;
                 Json::Value resRoot;
-                if(!resReader.parse(res->body,resRoot))
+                if(!resReader.parse(res->body,resRoot)){
                     resstr+="Test failed.\nCannot parse result.\n";
-                else resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
+                    mLog.push(LEVEL_ERROR,"Failed to parse result from node: %s.",
+                        configRoot["nodes"][i]["name"].asCString()
+                    );
+                }
+                else {
+                    resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
+                    mLog.push(LEVEL_VERBOSE,"Trace from %s to %s success.",
+                        configRoot["nodes"][i]["name"].asCString(),
+                        msgparams[1].c_str()
+                    );
+                }
             }
         }
 
-        printf("User %li[%s %s] required: Traceroute target: %s\n",
-            message->from->id,
-            message->from->firstName.c_str(),message->from->lastName.c_str(),
-            msgparams[1].c_str()
-        );
+        mLog.push(LEVEL_INFO,"Traceroute finish.");
         
         bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
     });
@@ -129,31 +168,45 @@ int main(){
 
         std::string params="/tcping?host="+msgparams[1]+"&port="+msgparams[2];
 
+        mLog.push(LEVEL_INFO,"User %li[%s %s] required: TCPing target: %s:%s",
+            message->from->id,
+            message->from->firstName.c_str(),message->from->lastName.c_str(),
+            msgparams[1].c_str(),msgparams[2].c_str()
+        );
+
         for(unsigned int i=0;i<configRoot["nodes"].size();i++){
             resstr+="Node: "+configRoot["nodes"][i]["name"].asString()+"\n";
             std::string weburl=configRoot["nodes"][i]["url"].asString();
             httplib::Client cli(weburl.c_str());
 
-            if(debugmode)resstr+="Debug info:\n"+weburl+params+"\n";
-
             auto res = cli.Get(((std::string)(params+"&uuid="+configRoot["nodes"][i]["uuid"].asString())).c_str());
             if(res->status!=httplib::StatusCode::OK_200){
                 resstr+="Test failed.\nServer returned an error.\n";
+                mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
+                    configRoot["nodes"][i]["name"].asCString(),
+                    httplib::to_string(res.error())
+                );
             }
             else {
                 Json::Reader resReader;
                 Json::Value resRoot;
-                if(!resReader.parse(res->body,resRoot))
+                if(!resReader.parse(res->body,resRoot)){
                     resstr+="Test failed.\nCannot parse result.\n";
-                else resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
+                    mLog.push(LEVEL_ERROR,"Failed to parse result from node: %s.",
+                        configRoot["nodes"][i]["name"].asCString()
+                    );
+                }
+                else {
+                    resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
+                    mLog.push(LEVEL_VERBOSE,"TCPing from %s to %s:%s success.",
+                        configRoot["nodes"][i]["name"].asCString(),
+                        msgparams[1].c_str(),msgparams[2].c_str()
+                    );
+                }
             }
         }
 
-        printf("User %li[%s %s] required: TCPing target: %s:%s\n",
-            message->from->id,
-            message->from->firstName.c_str(),message->from->lastName.c_str(),
-            msgparams[1].c_str(),msgparams[2].c_str()
-        );
+        mLog.push(LEVEL_INFO,"TCPing finish.");
         
         bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
     });
@@ -167,32 +220,45 @@ int main(){
         while(messageParser>>msgparams[msgparamsCount])msgparamsCount++;
 
         std::string params="/route?target="+msgparams[1];
+        mLog.push(LEVEL_INFO,"User %li[%s %s] required: Query route for target: %s",
+            message->from->id,
+            message->from->firstName.c_str(),message->from->lastName.c_str(),
+            msgparams[1].c_str()
+        );
 
         for(unsigned int i=0;i<configRoot["nodes"].size();i++){
             resstr+="Node: "+configRoot["nodes"][i]["name"].asString()+"\n";
             std::string weburl=configRoot["nodes"][i]["url"].asString();
             httplib::Client cli(weburl.c_str());
-        
-            if(debugmode)resstr+="Debug info:\n"+weburl+params+"\n";
             
             auto res = cli.Get(((std::string)(params+"&uuid="+configRoot["nodes"][i]["uuid"].asString())).c_str());
             if(res->status!=httplib::StatusCode::OK_200){
                 resstr+="Test failed.\nServer returned an error.\n";
+                mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
+                    configRoot["nodes"][i]["name"].asCString(),
+                    httplib::to_string(res.error())
+                );
             }
             else {
                 Json::Reader resReader;
                 Json::Value resRoot;
-                if(!resReader.parse(res->body,resRoot))
+                if(!resReader.parse(res->body,resRoot)){
                     resstr+="Test failed.\nCannot parse result.\n";
-                else resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
+                    mLog.push(LEVEL_ERROR,"Failed to parse result from node: %s.",
+                        configRoot["nodes"][i]["name"].asCString()
+                    );
+                }
+                else {
+                    resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
+                    mLog.push(LEVEL_VERBOSE,"Query route from %s to %s success.",
+                        configRoot["nodes"][i]["name"].asCString(),
+                        msgparams[1].c_str()
+                    );
+                }
             }
         }
             
-        printf("User %li[%s %s] required: Get route for target: %s\n",
-            message->from->id,
-            message->from->firstName.c_str(),message->from->lastName.c_str(),
-            msgparams[1].c_str()
-        );
+        mLog.push(LEVEL_INFO,"Query route finish.");
         
         bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
     });
@@ -206,21 +272,21 @@ int main(){
     // });
 
     signal(SIGINT, [](int s) {
-        printf("SIGINT got\n");
+        mLog.push(LEVEL_INFO,"Got SIGINT.");
         exit(0);
     });
 
     try {
-        printf("Bot username: %s\n", bot.getApi().getMe()->username.c_str());
+        mLog.push(LEVEL_INFO,"Bot username: %s",bot.getApi().getMe()->username.c_str());
         bot.getApi().deleteWebhook();
 
         TgBot::TgLongPoll longPoll(bot);
-        printf("Long poll started\n");
+        mLog.push(LEVEL_INFO,"Long poll started");
         while (true) {
             longPoll.start();
         }
     } catch (std::exception& e) {
-        printf("error: %s\n", e.what());
+        mLog.push(LEVEL_ERROR,"Catch exception: %s",e.what());
     }
 
     return 0;

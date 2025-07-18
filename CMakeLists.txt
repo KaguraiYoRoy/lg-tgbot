@@ -62,8 +62,13 @@ set(LIBJSONCPP_SRC_LIST
     src/json/json_writer.cpp
 )
 
+set(LIBLOGGER_SRC_LIST
+    src/Log.cpp
+)
+
 add_library(tgbot ${LIBTGBOT_SRC_LIST})
 add_library(jsoncpp ${LIBJSONCPP_SRC_LIST})
+add_library(logger ${LIBLOGGER_SRC_LIST})
 
 add_executable(lg-tgbot src/lg-tgbot.cpp)
 add_executable(lg-tgbot-agent src/agent.cpp)
@@ -71,6 +76,7 @@ add_executable(lg-tgbot-agent src/agent.cpp)
 target_link_libraries(lg-tgbot
     tgbot
     jsoncpp
+    logger
     ${CMAKE_THREAD_LIBS_INIT}
     ${ZLIB_LIBRARIES}
     ${OPENSSL_LIBRARIES}
@@ -79,6 +85,7 @@ target_link_libraries(lg-tgbot
 
 target_link_libraries(lg-tgbot-agent
     jsoncpp
+    logger
 )
 
 # target_include_directories(${PROJECT_NAME} PUBLIC 

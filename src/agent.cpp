@@ -5,15 +5,14 @@
 #include <regex>
 #include <iostream>
 #include <fstream>
+#include <Log.h>
 
-void WriteLog(const std::string log){
-    using sc = std::chrono::system_clock;
-    std::time_t t = sc::to_time_t(sc::now());
-    char timebuf[20];
-    strftime(timebuf, 20, "%Y.%m.%d-%H:%M:%S", localtime(&t));
-    std::cout<<timebuf<<": "<<log<<'\n';
-    return;
-}
+#define DEFAULT_PORT        8080
+#define DEFAULT_BIND        "0.0.0.0"
+#define DEFAULT_LOGLEVEL_P  LEVEL_WARN
+#define DEFAULT_LOGLEVEL_W  LEVEL_ERROR
+
+Log mLog;
 
 std::string generate_uuid_v4() {
     // 用于生成随机字节的随机数引擎和分布
@@ -74,7 +73,8 @@ std::string exec_command(const char* cmd) {
     // 创建管道并执行命令
     std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
     if (!pipe) {
-        throw std::runtime_error("popen() failed!");
+        mLog.push(LEVEL_ERROR,"popen() Failed!");
+        return "popen() Failed";
     }
 
     // 读取命令输出
@@ -102,32 +102,40 @@ int main(){
     std::ifstream configReadFile("config.json");
     std::string uuid;
     std::string bind;
-    unsigned short port=0;
+    unsigned short port=0;    
+
     if(!configReadFile 
         || !configReader.parse(configReadFile,configRoot)
         || !configRoot.isMember("uuid")
     ){
         uuid=generate_uuid_v4();
         configRoot["uuid"]=uuid;
-        WriteLog("No UUID found. Generated: "+uuid);
+        mLog.push(LEVEL_INFO,"No UUID found. Generated: %s",uuid.c_str());
     }
     else
         uuid=configRoot["uuid"].asString();
-    WriteLog("Using uuid: "+uuid);
+
+    mLog.set_level(
+        configRoot.isMember("loglevel-print")&&configRoot["loglevel-print"].isInt()?configRoot["loglevel-print"].asInt():DEFAULT_LOGLEVEL_P,
+        configRoot.isMember("loglevel-write")&&configRoot["loglevel-write"].isInt()?configRoot["loglevel-write"].asInt():DEFAULT_LOGLEVEL_W
+    );
+    mLog.open("agent.log");
+
+    mLog.push(LEVEL_INFO,"Using uuid: %s",uuid.c_str());
 
     if(!configRoot.isMember("bind")){
-        WriteLog("No bind address defined. Using default: 0.0.0.0");
-        configRoot["bind"]="0.0.0.0";
+        mLog.push(LEVEL_INFO,"No bind address defined. Using default: %s",DEFAULT_BIND);
+        configRoot["bind"]=DEFAULT_BIND;
     }
     bind=configRoot["bind"].asString();
-    WriteLog("Using bind address: "+bind);
+    mLog.push(LEVEL_INFO,"Using bind address: %s",bind.c_str());
     
     if(!configRoot.isMember("port")){
-        WriteLog("No port defined. Using default: 8080");
-        configRoot["port"]=8080;
+        mLog.push(LEVEL_INFO,"No port defined. Using default: %d",DEFAULT_PORT);
+        configRoot["port"]=DEFAULT_PORT;
     }
-    WriteLog("Using port: "+configRoot["port"].asString());
     port=configRoot["port"].asUInt();
+    mLog.push(LEVEL_INFO,"Using port: %d",port);
 
     std::ofstream configWriteFile("config.json");
     configWriteFile<<configWriter.write(configRoot);
@@ -150,7 +158,7 @@ int main(){
         std::string cmdres = exec_command(cmd);
         std::string jsonres = res_to_json(cmdres);
         
-        WriteLog("Traceroute "+target);
+        mLog.push(LEVEL_INFO,"Traceroute %s",target.c_str());
 
         res.set_content(jsonres.c_str(), "application/json");
 
@@ -171,7 +179,7 @@ int main(){
         std::string cmdres = exec_command(cmd);
         std::string jsonres = res_to_json(cmdres);
         
-        WriteLog("Ping "+target);
+        mLog.push(LEVEL_INFO,"Ping %s",target.c_str());
 
         res.set_content(jsonres.c_str(), "application/json");
 
@@ -193,7 +201,7 @@ int main(){
         std::string cmdres = exec_command(cmd);
         std::string jsonres = res_to_json(cmdres);
 
-        WriteLog("TCPing "+host+":"+port);
+        mLog.push(LEVEL_INFO,"TCPing %s:%s",host.c_str(),port.c_str());
 
         res.set_content(jsonres.c_str(), "application/json");
 
@@ -215,7 +223,7 @@ int main(){
         std::string cmdres = exec_command(cmd);
         std::string jsonres = res_to_json(cmdres);
 
-        WriteLog("Show route for "+target);
+        mLog.push(LEVEL_INFO,"Show route for %s",target.c_str());
 
         res.set_content(jsonres.c_str(), "application/json");
 

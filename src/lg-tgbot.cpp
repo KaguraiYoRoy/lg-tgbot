@@ -367,7 +367,9 @@ int main(){
             
         mLog.push(LEVEL_INFO,"Whois lookup finish.");
         
-        bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
+        if(resstr.size()>4096)
+            bot.getApi().sendMessage(message->chat->id,"Error: Message too long.",nullptr,nullptr,nullptr,"Markdown");
+        else bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
     });
 
     // bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message) {

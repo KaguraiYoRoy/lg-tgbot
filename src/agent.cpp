@@ -229,6 +229,16 @@ int main(){
 
     });
 
+    signal(SIGINT, [](int s) {
+        mLog.push(LEVEL_INFO,"Got SIGINT.");
+        exit(0);
+    });
+
+    signal(SIGTERM, [](int s) {
+        mLog.push(LEVEL_INFO,"Got SIGTERM.");
+        exit(0);
+    });
+
     svr.listen(bind.c_str(), port);
 
     return 0;

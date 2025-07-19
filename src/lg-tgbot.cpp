@@ -295,6 +295,11 @@ int main(){
         exit(0);
     });
 
+    signal(SIGTERM, [](int s) {
+        mLog.push(LEVEL_INFO,"Got SIGTERM.");
+        exit(0);
+    });
+
     try {
         mLog.push(LEVEL_INFO,"Bot username: %s",bot.getApi().getMe()->username.c_str());
         bot.getApi().deleteWebhook();

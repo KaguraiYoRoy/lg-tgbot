@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <exception>
 #include <string>
+#include <vector>
 #include <tgbot/tgbot.h>
 #include <json/json.h>
 #include <httplib.h>
@@ -54,6 +55,36 @@ int main(){
         timeoutAll=configRoot.isMember("timeout-all")&&configRoot["timeout-all"].isInt()?configRoot["timeout-all"].asUInt():DEFAULT_TIMEOUT_ALL;
 
     TgBot::Bot bot(token);
+    
+    std::vector<TgBot::BotCommand::Ptr> commands;
+    TgBot::BotCommand::Ptr cmdArray(new TgBot::BotCommand);
+    cmdArray->command = "start";
+    cmdArray->description = "Show manual";
+
+    commands.push_back(cmdArray);
+
+    cmdArray = TgBot::BotCommand::Ptr(new TgBot::BotCommand);
+    cmdArray->command = "ping";
+    cmdArray->description = "Ping target";
+    commands.push_back(cmdArray);
+
+    cmdArray = TgBot::BotCommand::Ptr(new TgBot::BotCommand);
+    cmdArray->command = "trace";
+    cmdArray->description = "Traceroute target";
+    commands.push_back(cmdArray);
+
+    cmdArray = TgBot::BotCommand::Ptr(new TgBot::BotCommand);
+    cmdArray->command = "tcping";
+    cmdArray->description = "TCPing target host:ip";
+    commands.push_back(cmdArray);
+    
+    cmdArray = TgBot::BotCommand::Ptr(new TgBot::BotCommand);
+    cmdArray->command = "route";
+    cmdArray->description = "Query route for target (via BIRD2)";
+    commands.push_back(cmdArray);
+
+    bot.getApi().setMyCommands(commands);
+
     bot.getEvents().onCommand("start", [&bot](TgBot::Message::Ptr message) {
         bot.getApi().sendMessage(message->chat->id, "Manual:\n/ping <host>: Ping target host\n/tcping <host> <port>: TCPing host:port\n/trace <host>: Traceroute target host\n/route <host>: Get route for target host\n");
     });

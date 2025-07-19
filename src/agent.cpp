@@ -11,6 +11,7 @@
 #define DEFAULT_BIND        "0.0.0.0"
 #define DEFAULT_LOGLEVEL_P  LEVEL_WARN
 #define DEFAULT_LOGLEVEL_W  LEVEL_ERROR
+#define DEFAULT_WHOIS_SERVER "whois.akae.re"
 
 Log mLog;
 
@@ -102,7 +103,8 @@ int main(){
     std::ifstream configReadFile("config.json");
     std::string uuid;
     std::string bind;
-    unsigned short port=0;    
+    std::string whoisserver;
+    unsigned short port=0;
 
     if(!configReadFile 
         || !configReader.parse(configReadFile,configRoot)
@@ -136,6 +138,9 @@ int main(){
     }
     port=configRoot["port"].asUInt();
     mLog.push(LEVEL_INFO,"Using port: %d",port);
+
+    whoisserver=configRoot.isMember("whois-server")&&configRoot["whois-server"].isString()?configRoot["whois-server"].asString():DEFAULT_WHOIS_SERVER;
+    mLog.push(LEVEL_INFO,"Using whois server: %s",whoisserver.c_str());
 
     std::ofstream configWriteFile("config.json");
     configWriteFile<<configWriter.write(configRoot);
@@ -227,6 +232,27 @@ int main(){
 
         res.set_content(jsonres.c_str(), "application/json");
 
+    });
+    
+    svr.Get("/whois", [&](const httplib::Request &req, httplib::Response &res) {
+        if (!req.has_param("target") || !req.has_param("uuid")) {
+            res.status = 400; // Bad Request
+            return;
+        }
+        if(req.get_param_value("uuid") != uuid.c_str()){
+            res.status = 401;
+            return;
+        }
+        std::string target = sanitize(req.get_param_value("target"));
+        char cmd[1024];
+        sprintf(cmd, "whois -h %s %s 2>&1",whoisserver.c_str(),target.c_str());
+
+        std::string cmdres = exec_command(cmd);
+        std::string jsonres = res_to_json(cmdres);
+
+        mLog.push(LEVEL_INFO,"Whois lookup: %s",target.c_str());
+
+        res.set_content(jsonres.c_str(), "application/json");
     });
 
     signal(SIGINT, [](int s) {

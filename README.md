@@ -3,7 +3,7 @@ A simple Looking-Glass for BIRD2 based on Telegram Bot
 
 # Require
 ```bash
-sudo apt install g++ make binutils cmake libboost-system-dev libssl-dev zlib1g-dev libcurl4-openssl-dev traceroute bc tcptraceroute
+sudo apt install g++ make binutils cmake libboost-system-dev libssl-dev zlib1g-dev libcurl4-openssl-dev traceroute bc tcptraceroute whois
 ```
 
 > [!Important]
@@ -41,7 +41,8 @@ sudo apt install g++ make binutils cmake libboost-system-dev libssl-dev zlib1g-d
     "loglevel-write":0,
     "bind":"0.0.0.0",
     "port":8080,
-    "uuid":"<UUID. Empty to auto generate>"
+    "uuid":"<UUID. Empty to auto generate>",
+    "whois-server":"whois.akae.re"
 }
 ```
 
@@ -56,6 +57,7 @@ _Parameter which has a **default** value is **optional**._
 | `timeout-connection` | Maximum time to connect to an agent (unit: milliseconds) | `300` |
 | `timeout-read` | Maximum time to read from an agent (unit: milliseconds) | `3000` |
 | `timeout-all` | The maximum time during the entire connection process (unit: milliseconds) | `5000` |
+| `whois-server` | Whois server address | `whois.akae.re` |
 
 ## Log Level tabel
 | Level | Value |

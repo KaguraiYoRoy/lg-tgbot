@@ -82,11 +82,16 @@ int main(){
     cmdArray->command = "route";
     cmdArray->description = "Query route for target (via BIRD2)";
     commands.push_back(cmdArray);
+    
+    cmdArray = TgBot::BotCommand::Ptr(new TgBot::BotCommand);
+    cmdArray->command = "whois";
+    cmdArray->description = "Whois lookup";
+    commands.push_back(cmdArray);
 
     bot.getApi().setMyCommands(commands);
 
     bot.getEvents().onCommand("start", [&bot](TgBot::Message::Ptr message) {
-        bot.getApi().sendMessage(message->chat->id, "Manual:\n/ping <host>: Ping target host\n/tcping <host> <port>: TCPing host:port\n/trace <host>: Traceroute target host\n/route <host>: Get route for target host\n");
+        bot.getApi().sendMessage(message->chat->id, "Manual:\n/ping <host>: Ping target host\n/tcping <host> <port>: TCPing host:port\n/trace <host>: Traceroute target host\n/route <host>: Get route for target host\n/whois <target>: Whois lookup");
     });
 
     bot.getEvents().onCommand("ping", [&](TgBot::Message::Ptr message){
@@ -309,6 +314,58 @@ int main(){
         }
             
         mLog.push(LEVEL_INFO,"Query route finish.");
+        
+        bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
+    });
+
+    bot.getEvents().onCommand("whois", [&](TgBot::Message::Ptr message){
+        std::string resstr = "";
+
+        std::istringstream messageParser(message->text);
+        std::string msgparams[16];
+        short msgparamsCount=0;
+        while(messageParser>>msgparams[msgparamsCount])msgparamsCount++;
+
+        std::string params="/whois?target="+msgparams[1];
+        mLog.push(LEVEL_INFO,"User %li[%s %s] required: Query route for target: %s",
+            message->from->id,
+            message->from->firstName.c_str(),message->from->lastName.c_str(),
+            msgparams[1].c_str()
+        );
+
+        std::string weburl=configRoot["nodes"][0]["url"].asString();
+        httplib::Client cli(weburl.c_str());
+        cli.set_connection_timeout(std::chrono::milliseconds(timeoutConn));
+        cli.set_read_timeout(std::chrono::milliseconds(timeoutRead));
+        cli.set_max_timeout(std::chrono::milliseconds(timeoutAll));
+        
+        auto res = cli.Get(((std::string)(params+"&uuid="+configRoot["nodes"][0]["uuid"].asString())).c_str());
+        if(!res||res->status!=httplib::StatusCode::OK_200){
+            resstr+="Test failed.\nServer returned an error.\n";
+            mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
+                configRoot["nodes"][0]["name"].asCString(),
+                httplib::to_string(res.error()).c_str()
+            );
+        }
+        else {
+            Json::Reader resReader;
+            Json::Value resRoot;
+            if(!resReader.parse(res->body,resRoot)){
+                resstr+="Test failed.\nCannot parse result.\n";
+                mLog.push(LEVEL_ERROR,"Failed to parse result from node: %s.",
+                    configRoot["nodes"][0]["name"].asCString()
+                );
+            }
+            else {
+                resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
+                mLog.push(LEVEL_VERBOSE,"Whois lookup from %s to %s success.",
+                    configRoot["nodes"][0]["name"].asCString(),
+                    msgparams[1].c_str()
+                );
+            }
+        }
+            
+        mLog.push(LEVEL_INFO,"Whois lookup finish.");
         
         bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
     });

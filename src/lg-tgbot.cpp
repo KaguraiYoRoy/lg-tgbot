@@ -10,6 +10,9 @@
 
 #define DEFAULT_LOGLEVEL_P LEVEL_WARN
 #define DEFAULT_LOGLEVEL_W LEVEL_ERROR
+#define DEFAULT_TIMEOUT_CONN 300
+#define DEFAULT_TIMEOUT_READ 3000
+#define DEFAULT_TIMEOUT_ALL 5000
 
 Log mLog;
 
@@ -34,9 +37,6 @@ int main(){
     );
     mLog.open("master.log");
 
-    std::string token(configRoot["token"].asCString());
-    mLog.push(LEVEL_INFO,"Token: %s",token.c_str());
-
     for(unsigned int i=0;i<configRoot["nodes"].size();i++){
         if(!configRoot["nodes"][i].isMember("uuid") || !configRoot["nodes"][i]["uuid"].isString()){
             if(!configRoot["nodes"][i].isMember("name") || !configRoot["nodes"][i]["name"].isString())
@@ -45,6 +45,13 @@ int main(){
             return 1;
         }
     }
+    
+    std::string token(configRoot["token"].asCString());
+    mLog.push(LEVEL_INFO,"Token: %s",token.c_str());
+
+    unsigned int timeoutConn=configRoot.isMember("timeout-connection")&&configRoot["timeout-connection"].isInt()?configRoot["timeout-connection"].asUInt():DEFAULT_TIMEOUT_CONN,
+        timeoutRead=configRoot.isMember("timeout-read")&&configRoot["timeout-read"].isInt()?configRoot["timeout-read"].asUInt():DEFAULT_TIMEOUT_READ,
+        timeoutAll=configRoot.isMember("timeout-all")&&configRoot["timeout-all"].isInt()?configRoot["timeout-all"].asUInt():DEFAULT_TIMEOUT_ALL;
 
     TgBot::Bot bot(token);
     bot.getEvents().onCommand("start", [&bot](TgBot::Message::Ptr message) {
@@ -71,6 +78,9 @@ int main(){
             resstr+="Node: "+configRoot["nodes"][i]["name"].asString()+"\n";
             std::string weburl=configRoot["nodes"][i]["url"].asString();
             httplib::Client cli(weburl.c_str());
+            cli.set_connection_timeout(std::chrono::milliseconds(timeoutConn));
+            cli.set_read_timeout(std::chrono::milliseconds(timeoutRead));
+            cli.set_max_timeout(std::chrono::milliseconds(timeoutAll)); 
 
             auto res = cli.Get(((std::string)(params+"&uuid="+configRoot["nodes"][i]["uuid"].asString())).c_str());
             if(res->status!=httplib::StatusCode::OK_200){
@@ -124,6 +134,9 @@ int main(){
             resstr+="Node: "+configRoot["nodes"][i]["name"].asString()+"\n";
             std::string weburl=configRoot["nodes"][i]["url"].asString();
             httplib::Client cli(weburl.c_str());
+            cli.set_connection_timeout(std::chrono::milliseconds(timeoutConn));
+            cli.set_read_timeout(std::chrono::milliseconds(timeoutRead));
+            cli.set_max_timeout(std::chrono::milliseconds(timeoutAll));
 
             auto res = cli.Get(((std::string)(params+"&uuid="+configRoot["nodes"][i]["uuid"].asString())).c_str());
             if(res->status!=httplib::StatusCode::OK_200){
@@ -178,6 +191,9 @@ int main(){
             resstr+="Node: "+configRoot["nodes"][i]["name"].asString()+"\n";
             std::string weburl=configRoot["nodes"][i]["url"].asString();
             httplib::Client cli(weburl.c_str());
+            cli.set_connection_timeout(std::chrono::milliseconds(timeoutConn));
+            cli.set_read_timeout(std::chrono::milliseconds(timeoutRead));
+            cli.set_max_timeout(std::chrono::milliseconds(timeoutAll));
 
             auto res = cli.Get(((std::string)(params+"&uuid="+configRoot["nodes"][i]["uuid"].asString())).c_str());
             if(res->status!=httplib::StatusCode::OK_200){
@@ -230,6 +246,9 @@ int main(){
             resstr+="Node: "+configRoot["nodes"][i]["name"].asString()+"\n";
             std::string weburl=configRoot["nodes"][i]["url"].asString();
             httplib::Client cli(weburl.c_str());
+            cli.set_connection_timeout(std::chrono::milliseconds(timeoutConn));
+            cli.set_read_timeout(std::chrono::milliseconds(timeoutRead));
+            cli.set_max_timeout(std::chrono::milliseconds(timeoutAll));
             
             auto res = cli.Get(((std::string)(params+"&uuid="+configRoot["nodes"][i]["uuid"].asString())).c_str());
             if(res->status!=httplib::StatusCode::OK_200){

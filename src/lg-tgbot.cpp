@@ -83,11 +83,11 @@ int main(){
             cli.set_max_timeout(std::chrono::milliseconds(timeoutAll)); 
 
             auto res = cli.Get(((std::string)(params+"&uuid="+configRoot["nodes"][i]["uuid"].asString())).c_str());
-            if(res->status!=httplib::StatusCode::OK_200){
+            if(!res||res->status!=httplib::StatusCode::OK_200){
                 resstr+="Test failed.\nServer returned an error.\n";
                 mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
                     configRoot["nodes"][i]["name"].asCString(),
-                    httplib::to_string(res.error())
+                    httplib::to_string(res.error()).c_str()
                 );
             }
             else {
@@ -139,11 +139,11 @@ int main(){
             cli.set_max_timeout(std::chrono::milliseconds(timeoutAll));
 
             auto res = cli.Get(((std::string)(params+"&uuid="+configRoot["nodes"][i]["uuid"].asString())).c_str());
-            if(res->status!=httplib::StatusCode::OK_200){
+            if(!res||res->status!=httplib::StatusCode::OK_200){
                 resstr+="Test failed.\nServer returned an error.\n";
                 mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
                     configRoot["nodes"][i]["name"].asCString(),
-                    httplib::to_string(res.error())
+                    httplib::to_string(res.error()).c_str()
                 );
             }
             else {
@@ -196,11 +196,11 @@ int main(){
             cli.set_max_timeout(std::chrono::milliseconds(timeoutAll));
 
             auto res = cli.Get(((std::string)(params+"&uuid="+configRoot["nodes"][i]["uuid"].asString())).c_str());
-            if(res->status!=httplib::StatusCode::OK_200){
+            if(!res||res->status!=httplib::StatusCode::OK_200){
                 resstr+="Test failed.\nServer returned an error.\n";
                 mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
                     configRoot["nodes"][i]["name"].asCString(),
-                    httplib::to_string(res.error())
+                    httplib::to_string(res.error()).c_str()
                 );
             }
             else {
@@ -251,11 +251,11 @@ int main(){
             cli.set_max_timeout(std::chrono::milliseconds(timeoutAll));
             
             auto res = cli.Get(((std::string)(params+"&uuid="+configRoot["nodes"][i]["uuid"].asString())).c_str());
-            if(res->status!=httplib::StatusCode::OK_200){
+            if(!res||res->status!=httplib::StatusCode::OK_200){
                 resstr+="Test failed.\nServer returned an error.\n";
                 mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
                     configRoot["nodes"][i]["name"].asCString(),
-                    httplib::to_string(res.error())
+                    httplib::to_string(res.error()).c_str()
                 );
             }
             else {

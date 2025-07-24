@@ -431,7 +431,7 @@ int main(){
             unsigned int serverid = atoi(dataMap["targetserver"].c_str());
             
             bot.getApi().editMessageText(
-                ping(serverid,params[1]),
+                "Timestamp: "+std::to_string(time(NULL))+"\n"+ping(serverid,params[1]),
                 query->message->chat->id,
                 query->message->messageId,
                 "",
@@ -445,7 +445,7 @@ int main(){
             unsigned int serverid = atoi(dataMap["targetserver"].c_str());
             
             bot.getApi().editMessageText(
-                trace(serverid,params[1]),
+                "Timestamp: "+std::to_string(time(NULL))+"\n"+trace(serverid,params[1]),
                 query->message->chat->id,
                 query->message->messageId,
                 "",
@@ -460,7 +460,7 @@ int main(){
             unsigned int serverid = atoi(dataMap["targetserver"].c_str());
             
             bot.getApi().editMessageText(
-                tcping(serverid,params[1],params[2]),
+                "Timestamp: "+std::to_string(time(NULL))+"\n"+tcping(serverid,params[1],params[2]),
                 query->message->chat->id,
                 query->message->messageId,
                 "",
@@ -474,7 +474,7 @@ int main(){
             unsigned int serverid = atoi(dataMap["targetserver"].c_str());
             
             bot.getApi().editMessageText(
-                route(serverid,params[1]),
+                "Timestamp: "+std::to_string(time(NULL))+"\n"+route(serverid,params[1]),
                 query->message->chat->id,
                 query->message->messageId,
                 "",

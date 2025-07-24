@@ -4,6 +4,7 @@
 #include <exception>
 #include <string>
 #include <vector>
+#include <map>
 #include <tgbot/tgbot.h>
 #include <json/json.h>
 #include <httplib.h>
@@ -28,12 +29,19 @@ std::string ping(int serverid,std::string target){
     cli.set_max_timeout(std::chrono::milliseconds(timeoutAll)); 
 
     auto res = cli.Get(((std::string)("/ping?target="+target+"&uuid="+configRoot["nodes"][serverid]["uuid"].asString())).c_str());
-    if(!res||res->status!=httplib::StatusCode::OK_200){
+    if(!res){
         mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
             configRoot["nodes"][serverid]["name"].asCString(),
             httplib::to_string(res.error()).c_str()
         );
         return "HTTP Error";
+    }
+
+    if(res->status==httplib::StatusCode::Unauthorized_401){
+        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP 401: Unauthorized. Please check UUID",
+            configRoot["nodes"][serverid]["name"].asCString()
+        );
+        return "Node Unauthorized";
     }
 
     Json::Reader resReader;
@@ -59,12 +67,19 @@ std::string trace(int serverid,std::string target){
     cli.set_max_timeout(std::chrono::milliseconds(timeoutAll)); 
 
     auto res = cli.Get(((std::string)("/trace?target="+target+"&uuid="+configRoot["nodes"][serverid]["uuid"].asString())).c_str());
-    if(!res||res->status!=httplib::StatusCode::OK_200){
+    if(!res){
         mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
             configRoot["nodes"][serverid]["name"].asCString(),
             httplib::to_string(res.error()).c_str()
         );
         return "HTTP Error";
+    }
+    
+    if(res->status==httplib::StatusCode::Unauthorized_401){
+        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP 401: Unauthorized. Please check UUID",
+            configRoot["nodes"][serverid]["name"].asCString()
+        );
+        return "Node Unauthorized";
     }
 
     Json::Reader resReader;
@@ -90,12 +105,19 @@ std::string tcping(int serverid,std::string host,std::string port){
     cli.set_max_timeout(std::chrono::milliseconds(timeoutAll)); 
 
     auto res = cli.Get(((std::string)("/tcping?host="+host+"&port="+port+"&uuid="+configRoot["nodes"][serverid]["uuid"].asString())).c_str());
-    if(!res||res->status!=httplib::StatusCode::OK_200){
+    if(!res){
         mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
             configRoot["nodes"][serverid]["name"].asCString(),
             httplib::to_string(res.error()).c_str()
         );
         return "HTTP Error";
+    }
+    
+    if(res->status==httplib::StatusCode::Unauthorized_401){
+        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP 401: Unauthorized. Please check UUID",
+            configRoot["nodes"][serverid]["name"].asCString()
+        );
+        return "Node Unauthorized";
     }
 
     Json::Reader resReader;
@@ -121,12 +143,19 @@ std::string route(int serverid, std::string target){
     cli.set_max_timeout(std::chrono::milliseconds(timeoutAll)); 
 
     auto res = cli.Get(((std::string)("/route?target="+target+"&uuid="+configRoot["nodes"][serverid]["uuid"].asString())).c_str());
-    if(!res||res->status!=httplib::StatusCode::OK_200){
+    if(!res){
         mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
             configRoot["nodes"][serverid]["name"].asCString(),
             httplib::to_string(res.error()).c_str()
         );
         return "HTTP Error";
+    }
+    
+    if(res->status==httplib::StatusCode::Unauthorized_401){
+        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP 401: Unauthorized. Please check UUID",
+            configRoot["nodes"][serverid]["name"].asCString()
+        );
+        return "Node Unauthorized";
     }
 
     Json::Reader resReader;
@@ -142,6 +171,45 @@ std::string route(int serverid, std::string target){
         target.c_str()
     );
     return "```shell\n"+resRoot["res"].asString()+"```";
+}
+
+TgBot::InlineKeyboardMarkup::Ptr buildInlineKeyboard(unsigned int current_serverid,std::string cmd,std::string* params){
+    TgBot::InlineKeyboardMarkup::Ptr keyboard(new TgBot::InlineKeyboardMarkup);
+    std::vector<TgBot::InlineKeyboardButton::Ptr> row;
+    for(unsigned int i=0;i<configRoot["nodes"].size();i++){
+        TgBot::InlineKeyboardButton::Ptr button(new TgBot::InlineKeyboardButton);
+        if(current_serverid==i)
+            button->text = "✅ "+configRoot["nodes"][i]["name"].asString();
+        else 
+            button->text = configRoot["nodes"][i]["name"].asString();
+        if(cmd=="tcping"){
+            char buffer[256];
+            sprintf(buffer,"cmd=tcping;targetserver=%d;host=%s;port=%s",i,params[1].c_str(),params[2].c_str());
+            button->callbackData=buffer;
+        }else{
+            char buffer[256];
+            sprintf(buffer,"cmd=%s;targetserver=%d;target=%s",cmd.c_str(),i,params[1].c_str());
+            button->callbackData=buffer;
+        }
+
+        row.push_back(button);
+    }
+    keyboard->inlineKeyboard.push_back(row);
+    return keyboard;
+}
+
+std::map<std::string, std::string> parseCallbackData(const std::string& data) {
+    std::map<std::string, std::string> result;
+    std::istringstream ss(data);
+    std::string item;
+
+    while (getline(ss, item, ';')) {
+        auto eq = item.find('=');
+        if (eq != std::string::npos) {
+            result[item.substr(0, eq)] = item.substr(eq + 1);
+        }
+    }
+    return result;
 }
 
 int main(){
@@ -232,7 +300,7 @@ int main(){
             msgparams[1].c_str()
         );
 
-        bot.getApi().sendMessage(message->chat->id,ping(0,msgparams[1]),nullptr,nullptr,nullptr,"Markdown");
+        bot.getApi().sendMessage(message->chat->id,ping(0,msgparams[1]),nullptr,nullptr,buildInlineKeyboard(0,"ping",msgparams),"Markdown");
 
         mLog.push(LEVEL_INFO,"Ping finish.");
     });
@@ -249,7 +317,7 @@ int main(){
             msgparams[1].c_str()
         );
         
-        bot.getApi().sendMessage(message->chat->id,trace(0,msgparams[1]),nullptr,nullptr,nullptr,"Markdown");
+        bot.getApi().sendMessage(message->chat->id,trace(0,msgparams[1]),nullptr,nullptr,buildInlineKeyboard(0,"trace",msgparams),"Markdown");
         
         mLog.push(LEVEL_INFO,"Traceroute finish.");
     });
@@ -267,7 +335,7 @@ int main(){
             msgparams[1].c_str(),msgparams[2].c_str()
         );
         
-        bot.getApi().sendMessage(message->chat->id,tcping(0,msgparams[1],msgparams[2]),nullptr,nullptr,nullptr,"Markdown");
+        bot.getApi().sendMessage(message->chat->id,tcping(0,msgparams[1],msgparams[2]),nullptr,nullptr,buildInlineKeyboard(0,"tcping",msgparams),"Markdown");
         
         mLog.push(LEVEL_INFO,"TCPing finish.");
     });
@@ -284,7 +352,7 @@ int main(){
             msgparams[1].c_str()
         );
         
-        bot.getApi().sendMessage(message->chat->id,route(0,msgparams[1]),nullptr,nullptr,nullptr,"Markdown");
+        bot.getApi().sendMessage(message->chat->id,route(0,msgparams[1]),nullptr,nullptr,buildInlineKeyboard(0,"route",msgparams),"Markdown");
         
         mLog.push(LEVEL_INFO,"Query route finish.");
     });
@@ -343,13 +411,79 @@ int main(){
         else bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
     });
 
-    // bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message) {
-    //     printf("User wrote %s\n", message->text.c_str());
-    //     if (StringTools::startsWith(message->text, "/start")) {
-    //         return;
-    //     }
-    //     bot.getApi().sendMessage(message->chat->id, "Your message is: " + message->text);
-    // });
+    bot.getEvents().onCallbackQuery([&bot](const TgBot::CallbackQuery::Ptr& query) {
+        try {
+            bot.getApi().answerCallbackQuery(query->id);
+            mLog.push(LEVEL_VERBOSE,"Callback answered.");
+        } catch (const std::exception& e) {
+            mLog.push(LEVEL_ERROR,"Callback error");
+        }
+
+        auto dataMap = parseCallbackData(query->data);
+        std::string cmd = dataMap["cmd"];
+        
+        TgBot::LinkPreviewOptions::Ptr previewOptions(new TgBot::LinkPreviewOptions);
+        previewOptions->isDisabled = true;
+
+        if (cmd=="ping") {
+            std::string params[2];
+            params[1]=dataMap["target"];
+            unsigned int serverid = atoi(dataMap["targetserver"].c_str());
+            
+            bot.getApi().editMessageText(
+                ping(serverid,params[1]),
+                query->message->chat->id,
+                query->message->messageId,
+                "",
+                "Markdown",
+                previewOptions,
+                buildInlineKeyboard(serverid,"ping",params)
+            );
+        }else if(cmd=="trace") {
+            std::string params[2];
+            params[1]=dataMap["target"];
+            unsigned int serverid = atoi(dataMap["targetserver"].c_str());
+            
+            bot.getApi().editMessageText(
+                trace(serverid,params[1]),
+                query->message->chat->id,
+                query->message->messageId,
+                "",
+                "Markdown",
+                previewOptions,
+                buildInlineKeyboard(serverid,"trace",params)
+            );
+        }else if(cmd=="tcping") {
+            std::string params[3];
+            params[1]=dataMap["host"];
+            params[2]=dataMap["port"];
+            unsigned int serverid = atoi(dataMap["targetserver"].c_str());
+            
+            bot.getApi().editMessageText(
+                tcping(serverid,params[1],params[2]),
+                query->message->chat->id,
+                query->message->messageId,
+                "",
+                "Markdown",
+                previewOptions,
+                buildInlineKeyboard(serverid,"tcping",params)
+            );
+        }else if(cmd=="route") {
+            std::string params[2];
+            params[1]=dataMap["target"];
+            unsigned int serverid = atoi(dataMap["targetserver"].c_str());
+            
+            bot.getApi().editMessageText(
+                route(serverid,params[1]),
+                query->message->chat->id,
+                query->message->messageId,
+                "",
+                "Markdown",
+                previewOptions,
+                buildInlineKeyboard(serverid,"route",params)
+            );
+        }
+    });
 
     signal(SIGINT, [](int s) {
         mLog.push(LEVEL_INFO,"Got SIGINT.");

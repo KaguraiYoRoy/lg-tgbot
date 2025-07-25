@@ -64,7 +64,7 @@ _Parameter which has a **default** value is **optional**._
 | `timeout-all` | The maximum time during the entire connection process (unit: milliseconds) | `5000` |
 | `whois-server` | Whois server address | `whois.akae.re` |
 
-## Log Level tabel
+## Log Level table
 | Level | Value |
 | --- | --- |
 | Verbose | 0 |

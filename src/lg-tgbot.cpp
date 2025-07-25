@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <mutex>
+#include <atomic>
 #include <tgbot/tgbot.h>
 #include <json/json.h>
 #include <httplib.h>
@@ -16,11 +18,22 @@
 #define DEFAULT_TIMEOUT_READ 3000
 #define DEFAULT_TIMEOUT_ALL 5000
 #define DEFAULT_SERVER_ID 0
+#define DEFAULT_DELETE_TIMER 30
+
+struct MsgTimerData {
+    int64_t chatId;
+    int32_t messageId;
+    unsigned int countdown;
+};
 
 Log mLog;
 Json::Value configRoot;
-
+std::map<std::pair<int64_t, int32_t>, MsgTimerData> messageTimers;
+std::mutex timersMutex;
+std::atomic<bool> exit_requested(false);
+std::thread threadAutoDelete;
 unsigned int timeoutConn,timeoutRead,timeoutAll;
+unsigned int autoDeleteTime;
 
 std::string ping(int serverid,std::string target){
     std::string weburl=configRoot["nodes"][serverid]["url"].asString();
@@ -199,6 +212,27 @@ TgBot::InlineKeyboardMarkup::Ptr buildInlineKeyboard(unsigned int current_server
     return keyboard;
 }
 
+void autoDeleteThread(TgBot::Bot* bot){
+    while(!exit_requested.load(std::memory_order_relaxed)){
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+
+        std::lock_guard<std::mutex> lock(timersMutex);
+
+        for (auto it = messageTimers.begin(); it != messageTimers.end(); ) {
+            MsgTimerData& data = it->second;
+
+            if (--data.countdown <= 0) {
+                mLog.push(LEVEL_VERBOSE,"Deleting message %ld in chat %ld",data.messageId,data.chatId);
+                bot->getApi().deleteMessage(data.chatId, data.messageId);
+                it = messageTimers.erase(it);
+                mLog.push(LEVEL_INFO,"Message %ld in chat %ld deleted",data.messageId,data.chatId);
+            } else {
+                ++it;
+            }
+        }
+    }
+}
+
 std::map<std::string, std::string> parseCallbackData(const std::string& data) {
     std::map<std::string, std::string> result;
     std::istringstream ss(data);
@@ -211,6 +245,30 @@ std::map<std::string, std::string> parseCallbackData(const std::string& data) {
         }
     }
     return result;
+}
+
+void setMsgTimer(int64_t chatID,int32_t msgID,unsigned int timer){
+    if(!autoDeleteTime)return;
+    std::lock_guard<std::mutex> lock(timersMutex);
+    messageTimers[{chatID, msgID}] = {chatID, msgID, timer};
+    mLog.push(LEVEL_VERBOSE,"Message %d in chat %ld will be deleted in %d second(s)",msgID,chatID,timer);
+}
+
+void sigHandler(int s){
+    switch(s){
+        case SIGINT:
+            mLog.push(LEVEL_INFO,"Got SIGINT");
+            exit_requested.store(true,std::memory_order_relaxed);
+            if(autoDeleteTime)threadAutoDelete.join();
+            exit(0);
+            break;
+        case SIGTERM:
+            mLog.push(LEVEL_INFO,"Got SIGTERM");
+            exit_requested.store(true,std::memory_order_relaxed);
+            if(autoDeleteTime)threadAutoDelete.join();
+            exit(0);
+            break;
+    }
 }
 
 int main(){
@@ -246,12 +304,20 @@ int main(){
     mLog.push(LEVEL_INFO,"Token: %s",token.c_str());
 
     unsigned int defaultSrvID=configRoot.isMember("default-server")&&configRoot["default-server"].isInt()?configRoot["default-server"].asUInt():DEFAULT_SERVER_ID;
+    autoDeleteTime=configRoot.isMember("autodelete")&&configRoot["autodelete"].isInt()?configRoot["autodelete"].asUInt():DEFAULT_DELETE_TIMER;
     timeoutConn=configRoot.isMember("timeout-connection")&&configRoot["timeout-connection"].isInt()?configRoot["timeout-connection"].asUInt():DEFAULT_TIMEOUT_CONN;
     timeoutRead=configRoot.isMember("timeout-read")&&configRoot["timeout-read"].isInt()?configRoot["timeout-read"].asUInt():DEFAULT_TIMEOUT_READ;
     timeoutAll=configRoot.isMember("timeout-all")&&configRoot["timeout-all"].isInt()?configRoot["timeout-all"].asUInt():DEFAULT_TIMEOUT_ALL;
 
     TgBot::Bot bot(token);
     
+    if(autoDeleteTime){
+        threadAutoDelete=std::thread(autoDeleteThread,&bot);
+        mLog.push(LEVEL_INFO,"Auto delete enabled. Timeout: %d",autoDeleteTime);
+    }
+    else
+        mLog.push(LEVEL_INFO,"Auto delete disabled");
+
     std::vector<TgBot::BotCommand::Ptr> commands;
     TgBot::BotCommand::Ptr cmdArray(new TgBot::BotCommand);
     cmdArray->command = "start";
@@ -302,7 +368,7 @@ int main(){
             msgparams[1].c_str()
         );
 
-        bot.getApi().sendMessage(
+        auto message_sent=bot.getApi().sendMessage(
             message->chat->id,
             ping(defaultSrvID,msgparams[1]),
             nullptr,
@@ -310,6 +376,8 @@ int main(){
             buildInlineKeyboard(defaultSrvID,"ping",msgparams),
             "Markdown"
         );
+
+        setMsgTimer(message_sent->chat->id,message_sent->messageId,autoDeleteTime);
 
         mLog.push(LEVEL_INFO,"Ping finish.");
     });
@@ -326,7 +394,7 @@ int main(){
             msgparams[1].c_str()
         );
         
-        bot.getApi().sendMessage(
+        auto message_sent=bot.getApi().sendMessage(
             message->chat->id,
             trace(defaultSrvID,msgparams[1]),
             nullptr,
@@ -335,6 +403,8 @@ int main(){
             "Markdown"
         );
         
+        setMsgTimer(message_sent->chat->id,message_sent->messageId,autoDeleteTime);
+
         mLog.push(LEVEL_INFO,"Traceroute finish.");
     });
 
@@ -351,7 +421,7 @@ int main(){
             msgparams[1].c_str(),msgparams[2].c_str()
         );
         
-        bot.getApi().sendMessage(
+        auto message_sent=bot.getApi().sendMessage(
             message->chat->id,
             tcping(defaultSrvID,msgparams[1],msgparams[2]),
             nullptr,
@@ -359,6 +429,8 @@ int main(){
             buildInlineKeyboard(defaultSrvID,"tcping",msgparams),
             "Markdown"
         );
+        
+        setMsgTimer(message_sent->chat->id,message_sent->messageId,autoDeleteTime);
         
         mLog.push(LEVEL_INFO,"TCPing finish.");
     });
@@ -375,7 +447,7 @@ int main(){
             msgparams[1].c_str()
         );
         
-        bot.getApi().sendMessage(
+        auto message_sent=bot.getApi().sendMessage(
             message->chat->id,
             route(defaultSrvID,msgparams[1]),
             nullptr,
@@ -383,6 +455,8 @@ int main(){
             buildInlineKeyboard(defaultSrvID,"route",msgparams),
             "Markdown"
         );
+        
+        setMsgTimer(message_sent->chat->id,message_sent->messageId,autoDeleteTime);
         
         mLog.push(LEVEL_INFO,"Query route finish.");
     });
@@ -436,9 +510,14 @@ int main(){
             
         mLog.push(LEVEL_INFO,"Whois lookup finish.");
         
+        TgBot::Message::Ptr message_sent;
+
         if(resstr.size()>4096)
-            bot.getApi().sendMessage(message->chat->id,"Error: Message too long.",nullptr,nullptr,nullptr,"Markdown");
-        else bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
+            message_sent=bot.getApi().sendMessage(message->chat->id,"Error: Message too long.",nullptr,nullptr,nullptr,"Markdown");
+        else 
+            message_sent=bot.getApi().sendMessage(message->chat->id,resstr,nullptr,nullptr,nullptr,"Markdown");
+        
+        setMsgTimer(message_sent->chat->id,message_sent->messageId,autoDeleteTime);
     });
 
     bot.getEvents().onCallbackQuery([&bot](const TgBot::CallbackQuery::Ptr& query) {
@@ -513,17 +592,12 @@ int main(){
                 buildInlineKeyboard(serverid,"route",params)
             );
         }
+
+        setMsgTimer(query->message->chat->id,query->message->messageId,autoDeleteTime);
     });
 
-    signal(SIGINT, [](int s) {
-        mLog.push(LEVEL_INFO,"Got SIGINT.");
-        exit(0);
-    });
-
-    signal(SIGTERM, [](int s) {
-        mLog.push(LEVEL_INFO,"Got SIGTERM.");
-        exit(0);
-    });
+    signal(SIGINT, sigHandler);
+    signal(SIGTERM, sigHandler);
 
     try {
         mLog.push(LEVEL_INFO,"Bot username: %s",bot.getApi().getMe()->username.c_str());

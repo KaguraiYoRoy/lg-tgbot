@@ -13,7 +13,8 @@ sudo apt install g++ make binutils cmake libboost-system-dev libssl-dev zlib1g-d
 ## Master
 ```json
 {
-    "default-server": 0,
+    "autodelete":30,
+    "default-server":0,
     "timeout-connection":300,
     "timeout-read":5000,
     "timeout-all":5000,
@@ -54,6 +55,7 @@ _Parameter which has a **default** value is **optional**._
 
 | Parameter | Description | Default |
 | --- | --- | --- |
+| `autodelete` | Auto delete message timeout (unit:second). Set `0` to disable auto delete | `30` |
 | `default-server` | The ID of default server. Default server will be used to process `whois`. The ID starts from 0 according to the node configuration sequence  | `0` |
 | `loglevel-print` | The level of logs printed to the console | `3` |
 | `loglevel-write` | The level of logs recorded in the log file | `4` |

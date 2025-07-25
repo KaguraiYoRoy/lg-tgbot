@@ -15,6 +15,7 @@
 #define DEFAULT_TIMEOUT_CONN 300
 #define DEFAULT_TIMEOUT_READ 3000
 #define DEFAULT_TIMEOUT_ALL 5000
+#define DEFAULT_SERVER_ID 0
 
 Log mLog;
 Json::Value configRoot;
@@ -244,6 +245,7 @@ int main(){
     std::string token(configRoot["token"].asCString());
     mLog.push(LEVEL_INFO,"Token: %s",token.c_str());
 
+    unsigned int defaultSrvID=configRoot.isMember("default-server")&&configRoot["default-server"].isInt()?configRoot["default-server"].asUInt():DEFAULT_SERVER_ID;
     timeoutConn=configRoot.isMember("timeout-connection")&&configRoot["timeout-connection"].isInt()?configRoot["timeout-connection"].asUInt():DEFAULT_TIMEOUT_CONN;
     timeoutRead=configRoot.isMember("timeout-read")&&configRoot["timeout-read"].isInt()?configRoot["timeout-read"].asUInt():DEFAULT_TIMEOUT_READ;
     timeoutAll=configRoot.isMember("timeout-all")&&configRoot["timeout-all"].isInt()?configRoot["timeout-all"].asUInt():DEFAULT_TIMEOUT_ALL;
@@ -300,7 +302,14 @@ int main(){
             msgparams[1].c_str()
         );
 
-        bot.getApi().sendMessage(message->chat->id,ping(0,msgparams[1]),nullptr,nullptr,buildInlineKeyboard(0,"ping",msgparams),"Markdown");
+        bot.getApi().sendMessage(
+            message->chat->id,
+            ping(defaultSrvID,msgparams[1]),
+            nullptr,
+            nullptr,
+            buildInlineKeyboard(defaultSrvID,"ping",msgparams),
+            "Markdown"
+        );
 
         mLog.push(LEVEL_INFO,"Ping finish.");
     });
@@ -317,7 +326,14 @@ int main(){
             msgparams[1].c_str()
         );
         
-        bot.getApi().sendMessage(message->chat->id,trace(0,msgparams[1]),nullptr,nullptr,buildInlineKeyboard(0,"trace",msgparams),"Markdown");
+        bot.getApi().sendMessage(
+            message->chat->id,
+            trace(defaultSrvID,msgparams[1]),
+            nullptr,
+            nullptr,
+            buildInlineKeyboard(defaultSrvID,"trace",msgparams),
+            "Markdown"
+        );
         
         mLog.push(LEVEL_INFO,"Traceroute finish.");
     });
@@ -335,7 +351,14 @@ int main(){
             msgparams[1].c_str(),msgparams[2].c_str()
         );
         
-        bot.getApi().sendMessage(message->chat->id,tcping(0,msgparams[1],msgparams[2]),nullptr,nullptr,buildInlineKeyboard(0,"tcping",msgparams),"Markdown");
+        bot.getApi().sendMessage(
+            message->chat->id,
+            tcping(defaultSrvID,msgparams[1],msgparams[2]),
+            nullptr,
+            nullptr,
+            buildInlineKeyboard(defaultSrvID,"tcping",msgparams),
+            "Markdown"
+        );
         
         mLog.push(LEVEL_INFO,"TCPing finish.");
     });
@@ -352,7 +375,14 @@ int main(){
             msgparams[1].c_str()
         );
         
-        bot.getApi().sendMessage(message->chat->id,route(0,msgparams[1]),nullptr,nullptr,buildInlineKeyboard(0,"route",msgparams),"Markdown");
+        bot.getApi().sendMessage(
+            message->chat->id,
+            route(defaultSrvID,msgparams[1]),
+            nullptr,
+            nullptr,
+            buildInlineKeyboard(defaultSrvID,"route",msgparams),
+            "Markdown"
+        );
         
         mLog.push(LEVEL_INFO,"Query route finish.");
     });

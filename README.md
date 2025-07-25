@@ -13,6 +13,7 @@ sudo apt install g++ make binutils cmake libboost-system-dev libssl-dev zlib1g-d
 ## Master
 ```json
 {
+    "default-server": 0,
     "timeout-connection":300,
     "timeout-read":5000,
     "timeout-all":5000,
@@ -20,16 +21,17 @@ sudo apt install g++ make binutils cmake libboost-system-dev libssl-dev zlib1g-d
     "loglevel-write":0,
     "token": "<Your Telegram Bot Token>",
     "nodes":[
-        {
+        {//id: 0
             "name": "<Node1 name>",
             "url": "<Node1 agent http://host:port>",
             "uuid": "<Node1 UUID>"
         },
-        {
+        {//id: 1
             "name": "<Node2 name>",
             "url": "<Node2 agent http://host:port>",
             "uuid": "<Node2 UUID>"
         }
+        // etc.
     ]
 }
 ```
@@ -52,6 +54,7 @@ _Parameter which has a **default** value is **optional**._
 
 | Parameter | Description | Default |
 | --- | --- | --- |
+| `default-server` | The ID of default server. Default server will be used to process `whois`. The ID starts from 0 according to the node configuration sequence  | `0` |
 | `loglevel-print` | The level of logs printed to the console | `3` |
 | `loglevel-write` | The level of logs recorded in the log file | `4` |
 | `timeout-connection` | Maximum time to connect to an agent (unit: milliseconds) | `300` |

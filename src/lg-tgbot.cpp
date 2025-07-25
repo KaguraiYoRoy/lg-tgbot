@@ -66,7 +66,7 @@ std::string ping(int serverid,std::string target){
         );
         return "Return value parse error";
     }
-    mLog.push(LEVEL_VERBOSE,"Ping from %s to %s success.",
+    mLog.push(LEVEL_INFO,"Ping from %s to %s success.",
         configRoot["nodes"][serverid]["name"].asCString(),
         target.c_str()
     );
@@ -104,7 +104,7 @@ std::string trace(int serverid,std::string target){
         );
         return "Return value parse error";
     }
-    mLog.push(LEVEL_VERBOSE,"Trace from %s to %s success.",
+    mLog.push(LEVEL_INFO,"Trace from %s to %s success.",
         configRoot["nodes"][serverid]["name"].asCString(),
         target.c_str()
     );
@@ -142,7 +142,7 @@ std::string tcping(int serverid,std::string host,std::string port){
         );
         return "Return value parse error";
     }
-    mLog.push(LEVEL_VERBOSE,"TCPing from %s to %s:%s success.",
+    mLog.push(LEVEL_INFO,"TCPing from %s to %s:%s success.",
         configRoot["nodes"][serverid]["name"].asCString(),
         host.c_str(),port.c_str()
     );
@@ -180,7 +180,7 @@ std::string route(int serverid, std::string target){
         );
         return "Return value parse error";
     }
-    mLog.push(LEVEL_VERBOSE,"Query route from %s to %s success.",
+    mLog.push(LEVEL_INFO,"Query route from %s to %s success.",
         configRoot["nodes"][serverid]["name"].asCString(),
         target.c_str()
     );
@@ -501,7 +501,7 @@ int main(){
             }
             else {
                 resstr+="```plain\n"+resRoot["res"].asString()+"```\n\n";
-                mLog.push(LEVEL_VERBOSE,"Whois lookup from %s to %s success.",
+                mLog.push(LEVEL_INFO,"Whois lookup from %s to %s success.",
                     configRoot["nodes"][0]["name"].asCString(),
                     msgparams[1].c_str()
                 );

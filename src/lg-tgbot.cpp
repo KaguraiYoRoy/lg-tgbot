@@ -35,241 +35,15 @@ std::thread threadAutoDelete;
 unsigned int timeoutConn,timeoutRead,timeoutAll;
 unsigned int autoDeleteTime;
 
-std::string ping(int serverid,std::string target){
-    std::string weburl=configRoot["nodes"][serverid]["url"].asString();
-    httplib::Client cli(weburl.c_str());
-    cli.set_connection_timeout(std::chrono::milliseconds(timeoutConn));
-    cli.set_read_timeout(std::chrono::milliseconds(timeoutRead));
-    cli.set_max_timeout(std::chrono::milliseconds(timeoutAll)); 
-
-    auto res = cli.Get(((std::string)("/ping?target="+target+"&uuid="+configRoot["nodes"][serverid]["uuid"].asString())).c_str());
-    if(!res){
-        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
-            configRoot["nodes"][serverid]["name"].asCString(),
-            httplib::to_string(res.error()).c_str()
-        );
-        return "HTTP Error";
-    }
-
-    if(res->status==httplib::StatusCode::Unauthorized_401){
-        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP 401: Unauthorized. Please check UUID",
-            configRoot["nodes"][serverid]["name"].asCString()
-        );
-        return "Node Unauthorized";
-    }
-
-    Json::Reader resReader;
-    Json::Value resRoot;
-    if(!resReader.parse(res->body,resRoot)){
-        mLog.push(LEVEL_ERROR,"Failed to parse result from node: %s.",
-            configRoot["nodes"][serverid]["name"].asCString()
-        );
-        return "Return value parse error";
-    }
-    mLog.push(LEVEL_INFO,"Ping from %s to %s success.",
-        configRoot["nodes"][serverid]["name"].asCString(),
-        target.c_str()
-    );
-    return "```shell\n"+resRoot["res"].asString()+"```";
-}
-
-std::string trace(int serverid,std::string target){
-    std::string weburl=configRoot["nodes"][serverid]["url"].asString();
-    httplib::Client cli(weburl.c_str());
-    cli.set_connection_timeout(std::chrono::milliseconds(timeoutConn));
-    cli.set_read_timeout(std::chrono::milliseconds(timeoutRead));
-    cli.set_max_timeout(std::chrono::milliseconds(timeoutAll)); 
-
-    auto res = cli.Get(((std::string)("/trace?target="+target+"&uuid="+configRoot["nodes"][serverid]["uuid"].asString())).c_str());
-    if(!res){
-        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
-            configRoot["nodes"][serverid]["name"].asCString(),
-            httplib::to_string(res.error()).c_str()
-        );
-        return "HTTP Error";
-    }
-    
-    if(res->status==httplib::StatusCode::Unauthorized_401){
-        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP 401: Unauthorized. Please check UUID",
-            configRoot["nodes"][serverid]["name"].asCString()
-        );
-        return "Node Unauthorized";
-    }
-
-    Json::Reader resReader;
-    Json::Value resRoot;
-    if(!resReader.parse(res->body,resRoot)){
-        mLog.push(LEVEL_ERROR,"Failed to parse result from node: %s.",
-            configRoot["nodes"][serverid]["name"].asCString()
-        );
-        return "Return value parse error";
-    }
-    mLog.push(LEVEL_INFO,"Trace from %s to %s success.",
-        configRoot["nodes"][serverid]["name"].asCString(),
-        target.c_str()
-    );
-    return "```shell\n"+resRoot["res"].asString()+"```";
-}
-
-std::string tcping(int serverid,std::string host,std::string port){
-    std::string weburl=configRoot["nodes"][serverid]["url"].asString();
-    httplib::Client cli(weburl.c_str());
-    cli.set_connection_timeout(std::chrono::milliseconds(timeoutConn));
-    cli.set_read_timeout(std::chrono::milliseconds(timeoutRead));
-    cli.set_max_timeout(std::chrono::milliseconds(timeoutAll)); 
-
-    auto res = cli.Get(((std::string)("/tcping?host="+host+"&port="+port+"&uuid="+configRoot["nodes"][serverid]["uuid"].asString())).c_str());
-    if(!res){
-        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
-            configRoot["nodes"][serverid]["name"].asCString(),
-            httplib::to_string(res.error()).c_str()
-        );
-        return "HTTP Error";
-    }
-    
-    if(res->status==httplib::StatusCode::Unauthorized_401){
-        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP 401: Unauthorized. Please check UUID",
-            configRoot["nodes"][serverid]["name"].asCString()
-        );
-        return "Node Unauthorized";
-    }
-
-    Json::Reader resReader;
-    Json::Value resRoot;
-    if(!resReader.parse(res->body,resRoot)){
-        mLog.push(LEVEL_ERROR,"Failed to parse result from node: %s.",
-            configRoot["nodes"][serverid]["name"].asCString()
-        );
-        return "Return value parse error";
-    }
-    mLog.push(LEVEL_INFO,"TCPing from %s to %s:%s success.",
-        configRoot["nodes"][serverid]["name"].asCString(),
-        host.c_str(),port.c_str()
-    );
-    return "```shell\n"+resRoot["res"].asString()+"```";
-}
-
-std::string route(int serverid, std::string target){
-    std::string weburl=configRoot["nodes"][serverid]["url"].asString();
-    httplib::Client cli(weburl.c_str());
-    cli.set_connection_timeout(std::chrono::milliseconds(timeoutConn));
-    cli.set_read_timeout(std::chrono::milliseconds(timeoutRead));
-    cli.set_max_timeout(std::chrono::milliseconds(timeoutAll)); 
-
-    auto res = cli.Get(((std::string)("/route?target="+target+"&uuid="+configRoot["nodes"][serverid]["uuid"].asString())).c_str());
-    if(!res){
-        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
-            configRoot["nodes"][serverid]["name"].asCString(),
-            httplib::to_string(res.error()).c_str()
-        );
-        return "HTTP Error";
-    }
-    
-    if(res->status==httplib::StatusCode::Unauthorized_401){
-        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP 401: Unauthorized. Please check UUID",
-            configRoot["nodes"][serverid]["name"].asCString()
-        );
-        return "Node Unauthorized";
-    }
-
-    Json::Reader resReader;
-    Json::Value resRoot;
-    if(!resReader.parse(res->body,resRoot)){
-        mLog.push(LEVEL_ERROR,"Failed to parse result from node: %s.",
-            configRoot["nodes"][serverid]["name"].asCString()
-        );
-        return "Return value parse error";
-    }
-    mLog.push(LEVEL_INFO,"Query route from %s to %s success.",
-        configRoot["nodes"][serverid]["name"].asCString(),
-        target.c_str()
-    );
-    return "```shell\n"+resRoot["res"].asString()+"```";
-}
-
-TgBot::InlineKeyboardMarkup::Ptr buildInlineKeyboard(unsigned int current_serverid,std::string cmd,std::string* params){
-    TgBot::InlineKeyboardMarkup::Ptr keyboard(new TgBot::InlineKeyboardMarkup);
-    std::vector<TgBot::InlineKeyboardButton::Ptr> row;
-    for(unsigned int i=0;i<configRoot["nodes"].size();i++){
-        TgBot::InlineKeyboardButton::Ptr button(new TgBot::InlineKeyboardButton);
-        if(current_serverid==i)
-            button->text = "✅ "+configRoot["nodes"][i]["name"].asString();
-        else 
-            button->text = configRoot["nodes"][i]["name"].asString();
-        if(cmd=="tcping"){
-            char buffer[256];
-            sprintf(buffer,"cmd=tcping;targetserver=%d;host=%s;port=%s",i,params[1].c_str(),params[2].c_str());
-            button->callbackData=buffer;
-        }else{
-            char buffer[256];
-            sprintf(buffer,"cmd=%s;targetserver=%d;target=%s",cmd.c_str(),i,params[1].c_str());
-            button->callbackData=buffer;
-        }
-
-        row.push_back(button);
-    }
-    keyboard->inlineKeyboard.push_back(row);
-    return keyboard;
-}
-
-void autoDeleteThread(TgBot::Bot* bot){
-    while(!exit_requested.load(std::memory_order_relaxed)){
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-
-        std::lock_guard<std::mutex> lock(timersMutex);
-
-        for (auto it = messageTimers.begin(); it != messageTimers.end(); ) {
-            MsgTimerData& data = it->second;
-
-            if (--data.countdown <= 0) {
-                mLog.push(LEVEL_VERBOSE,"Deleting message %ld in chat %ld",data.messageId,data.chatId);
-                bot->getApi().deleteMessage(data.chatId, data.messageId);
-                it = messageTimers.erase(it);
-                mLog.push(LEVEL_INFO,"Message %ld in chat %ld deleted",data.messageId,data.chatId);
-            } else {
-                ++it;
-            }
-        }
-    }
-}
-
-std::map<std::string, std::string> parseCallbackData(const std::string& data) {
-    std::map<std::string, std::string> result;
-    std::istringstream ss(data);
-    std::string item;
-
-    while (getline(ss, item, ';')) {
-        auto eq = item.find('=');
-        if (eq != std::string::npos) {
-            result[item.substr(0, eq)] = item.substr(eq + 1);
-        }
-    }
-    return result;
-}
-
-void setMsgTimer(int64_t chatID,int32_t msgID,unsigned int timer){
-    if(!autoDeleteTime)return;
-    std::lock_guard<std::mutex> lock(timersMutex);
-    messageTimers[{chatID, msgID}] = {chatID, msgID, timer};
-    mLog.push(LEVEL_VERBOSE,"Message %d in chat %ld will be deleted in %d second(s)",msgID,chatID,timer);
-}
-
-void sigHandler(int s){
-    switch(s){
-        case SIGINT:
-            mLog.push(LEVEL_INFO,"Got SIGINT");
-            exit_requested.store(true,std::memory_order_relaxed);
-            if(autoDeleteTime)threadAutoDelete.join();
-            exit(0);
-            break;
-        case SIGTERM:
-            mLog.push(LEVEL_INFO,"Got SIGTERM");
-            exit_requested.store(true,std::memory_order_relaxed);
-            if(autoDeleteTime)threadAutoDelete.join();
-            exit(0);
-            break;
-    }
-}
+std::string ping(int serverid,std::string target);
+std::string trace(int serverid,std::string target);
+std::string tcping(int serverid,std::string host,std::string port);
+std::string route(int serverid, std::string target);
+std::map<std::string, std::string> parseCallbackData(const std::string& data);
+TgBot::InlineKeyboardMarkup::Ptr buildInlineKeyboard(unsigned int current_serverid,std::string cmd,std::string* params);
+void autoDeleteThread(TgBot::Bot* bot);
+void setMsgTimer(int64_t chatID,int32_t msgID,unsigned int timer);
+void sigHandler(int s);
 
 int main(){
     Json::Reader configReader;
@@ -613,4 +387,240 @@ int main(){
     }
 
     return 0;
+}
+
+std::string ping(int serverid,std::string target){
+    std::string weburl=configRoot["nodes"][serverid]["url"].asString();
+    httplib::Client cli(weburl.c_str());
+    cli.set_connection_timeout(std::chrono::milliseconds(timeoutConn));
+    cli.set_read_timeout(std::chrono::milliseconds(timeoutRead));
+    cli.set_max_timeout(std::chrono::milliseconds(timeoutAll)); 
+
+    auto res = cli.Get(((std::string)("/ping?target="+target+"&uuid="+configRoot["nodes"][serverid]["uuid"].asString())).c_str());
+    if(!res){
+        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
+            configRoot["nodes"][serverid]["name"].asCString(),
+            httplib::to_string(res.error()).c_str()
+        );
+        return "HTTP Error";
+    }
+
+    if(res->status==httplib::StatusCode::Unauthorized_401){
+        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP 401: Unauthorized. Please check UUID",
+            configRoot["nodes"][serverid]["name"].asCString()
+        );
+        return "Node Unauthorized";
+    }
+
+    Json::Reader resReader;
+    Json::Value resRoot;
+    if(!resReader.parse(res->body,resRoot)){
+        mLog.push(LEVEL_ERROR,"Failed to parse result from node: %s.",
+            configRoot["nodes"][serverid]["name"].asCString()
+        );
+        return "Return value parse error";
+    }
+    mLog.push(LEVEL_INFO,"Ping from %s to %s success.",
+        configRoot["nodes"][serverid]["name"].asCString(),
+        target.c_str()
+    );
+    return "```shell\n"+resRoot["res"].asString()+"```";
+}
+
+std::string trace(int serverid,std::string target){
+    std::string weburl=configRoot["nodes"][serverid]["url"].asString();
+    httplib::Client cli(weburl.c_str());
+    cli.set_connection_timeout(std::chrono::milliseconds(timeoutConn));
+    cli.set_read_timeout(std::chrono::milliseconds(timeoutRead));
+    cli.set_max_timeout(std::chrono::milliseconds(timeoutAll)); 
+
+    auto res = cli.Get(((std::string)("/trace?target="+target+"&uuid="+configRoot["nodes"][serverid]["uuid"].asString())).c_str());
+    if(!res){
+        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
+            configRoot["nodes"][serverid]["name"].asCString(),
+            httplib::to_string(res.error()).c_str()
+        );
+        return "HTTP Error";
+    }
+    
+    if(res->status==httplib::StatusCode::Unauthorized_401){
+        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP 401: Unauthorized. Please check UUID",
+            configRoot["nodes"][serverid]["name"].asCString()
+        );
+        return "Node Unauthorized";
+    }
+
+    Json::Reader resReader;
+    Json::Value resRoot;
+    if(!resReader.parse(res->body,resRoot)){
+        mLog.push(LEVEL_ERROR,"Failed to parse result from node: %s.",
+            configRoot["nodes"][serverid]["name"].asCString()
+        );
+        return "Return value parse error";
+    }
+    mLog.push(LEVEL_INFO,"Trace from %s to %s success.",
+        configRoot["nodes"][serverid]["name"].asCString(),
+        target.c_str()
+    );
+    return "```shell\n"+resRoot["res"].asString()+"```";
+}
+
+std::string tcping(int serverid,std::string host,std::string port){
+    std::string weburl=configRoot["nodes"][serverid]["url"].asString();
+    httplib::Client cli(weburl.c_str());
+    cli.set_connection_timeout(std::chrono::milliseconds(timeoutConn));
+    cli.set_read_timeout(std::chrono::milliseconds(timeoutRead));
+    cli.set_max_timeout(std::chrono::milliseconds(timeoutAll)); 
+
+    auto res = cli.Get(((std::string)("/tcping?host="+host+"&port="+port+"&uuid="+configRoot["nodes"][serverid]["uuid"].asString())).c_str());
+    if(!res){
+        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
+            configRoot["nodes"][serverid]["name"].asCString(),
+            httplib::to_string(res.error()).c_str()
+        );
+        return "HTTP Error";
+    }
+    
+    if(res->status==httplib::StatusCode::Unauthorized_401){
+        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP 401: Unauthorized. Please check UUID",
+            configRoot["nodes"][serverid]["name"].asCString()
+        );
+        return "Node Unauthorized";
+    }
+
+    Json::Reader resReader;
+    Json::Value resRoot;
+    if(!resReader.parse(res->body,resRoot)){
+        mLog.push(LEVEL_ERROR,"Failed to parse result from node: %s.",
+            configRoot["nodes"][serverid]["name"].asCString()
+        );
+        return "Return value parse error";
+    }
+    mLog.push(LEVEL_INFO,"TCPing from %s to %s:%s success.",
+        configRoot["nodes"][serverid]["name"].asCString(),
+        host.c_str(),port.c_str()
+    );
+    return "```shell\n"+resRoot["res"].asString()+"```";
+}
+
+std::string route(int serverid, std::string target){
+    std::string weburl=configRoot["nodes"][serverid]["url"].asString();
+    httplib::Client cli(weburl.c_str());
+    cli.set_connection_timeout(std::chrono::milliseconds(timeoutConn));
+    cli.set_read_timeout(std::chrono::milliseconds(timeoutRead));
+    cli.set_max_timeout(std::chrono::milliseconds(timeoutAll)); 
+
+    auto res = cli.Get(((std::string)("/route?target="+target+"&uuid="+configRoot["nodes"][serverid]["uuid"].asString())).c_str());
+    if(!res){
+        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP error: %s",
+            configRoot["nodes"][serverid]["name"].asCString(),
+            httplib::to_string(res.error()).c_str()
+        );
+        return "HTTP Error";
+    }
+    
+    if(res->status==httplib::StatusCode::Unauthorized_401){
+        mLog.push(LEVEL_ERROR,"Failed to test from node: %s. HTTP 401: Unauthorized. Please check UUID",
+            configRoot["nodes"][serverid]["name"].asCString()
+        );
+        return "Node Unauthorized";
+    }
+
+    Json::Reader resReader;
+    Json::Value resRoot;
+    if(!resReader.parse(res->body,resRoot)){
+        mLog.push(LEVEL_ERROR,"Failed to parse result from node: %s.",
+            configRoot["nodes"][serverid]["name"].asCString()
+        );
+        return "Return value parse error";
+    }
+    mLog.push(LEVEL_INFO,"Query route from %s to %s success.",
+        configRoot["nodes"][serverid]["name"].asCString(),
+        target.c_str()
+    );
+    return "```shell\n"+resRoot["res"].asString()+"```";
+}
+
+std::map<std::string, std::string> parseCallbackData(const std::string& data){
+    std::map<std::string, std::string> result;
+    std::istringstream ss(data);
+    std::string item;
+
+    while (getline(ss, item, ';')) {
+        auto eq = item.find('=');
+        if (eq != std::string::npos) {
+            result[item.substr(0, eq)] = item.substr(eq + 1);
+        }
+    }
+    return result;
+}
+
+TgBot::InlineKeyboardMarkup::Ptr buildInlineKeyboard(unsigned int current_serverid,std::string cmd,std::string* params){
+    TgBot::InlineKeyboardMarkup::Ptr keyboard(new TgBot::InlineKeyboardMarkup);
+    std::vector<TgBot::InlineKeyboardButton::Ptr> row;
+    for(unsigned int i=0;i<configRoot["nodes"].size();i++){
+        TgBot::InlineKeyboardButton::Ptr button(new TgBot::InlineKeyboardButton);
+        if(current_serverid==i)
+            button->text = "✅ "+configRoot["nodes"][i]["name"].asString();
+        else 
+            button->text = configRoot["nodes"][i]["name"].asString();
+        if(cmd=="tcping"){
+            char buffer[256];
+            sprintf(buffer,"cmd=tcping;targetserver=%d;host=%s;port=%s",i,params[1].c_str(),params[2].c_str());
+            button->callbackData=buffer;
+        }else{
+            char buffer[256];
+            sprintf(buffer,"cmd=%s;targetserver=%d;target=%s",cmd.c_str(),i,params[1].c_str());
+            button->callbackData=buffer;
+        }
+
+        row.push_back(button);
+    }
+    keyboard->inlineKeyboard.push_back(row);
+    return keyboard;
+}
+
+void autoDeleteThread(TgBot::Bot* bot){
+    while(!exit_requested.load(std::memory_order_relaxed)){
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+
+        std::lock_guard<std::mutex> lock(timersMutex);
+
+        for (auto it = messageTimers.begin(); it != messageTimers.end(); ) {
+            MsgTimerData& data = it->second;
+
+            if (--data.countdown <= 0) {
+                mLog.push(LEVEL_VERBOSE,"Deleting message %ld in chat %ld",data.messageId,data.chatId);
+                bot->getApi().deleteMessage(data.chatId, data.messageId);
+                it = messageTimers.erase(it);
+                mLog.push(LEVEL_INFO,"Message %ld in chat %ld deleted",data.messageId,data.chatId);
+            } else {
+                ++it;
+            }
+        }
+    }
+}
+
+void setMsgTimer(int64_t chatID,int32_t msgID,unsigned int timer){
+    if(!autoDeleteTime)return;
+    std::lock_guard<std::mutex> lock(timersMutex);
+    messageTimers[{chatID, msgID}] = {chatID, msgID, timer};
+    mLog.push(LEVEL_VERBOSE,"Message %d in chat %ld will be deleted in %d second(s)",msgID,chatID,timer);
+}
+
+void sigHandler(int s){
+    switch(s){
+        case SIGINT:
+            mLog.push(LEVEL_INFO,"Got SIGINT");
+            exit_requested.store(true,std::memory_order_relaxed);
+            if(autoDeleteTime)threadAutoDelete.join();
+            exit(0);
+            break;
+        case SIGTERM:
+            mLog.push(LEVEL_INFO,"Got SIGTERM");
+            exit_requested.store(true,std::memory_order_relaxed);
+            if(autoDeleteTime)threadAutoDelete.join();
+            exit(0);
+            break;
+    }
 }

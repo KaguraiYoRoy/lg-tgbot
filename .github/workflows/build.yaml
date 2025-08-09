@@ -61,8 +61,8 @@ jobs:
       - name: Package binary
         run: |
           cd build
-          tar czvf ../lg-tgbot_${{ github.ref_name }}-${{ matrix.arch }}.tar.gz lg-tgbot
-          tar czvf ../lg-tgbot-agent_${{ github.ref_name }}-${{ matrix.arch }}.tar.gz lg-tgbot-agent
+          tar czvf ../lg-tgbot_${{ matrix.arch }}.tar.gz lg-tgbot
+          tar czvf ../lg-tgbot-agent_${{ matrix.arch }}.tar.gz lg-tgbot-agent
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2

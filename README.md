@@ -2,8 +2,14 @@
 A simple Looking-Glass for BIRD2 based on Telegram Bot
 
 # Require
+## Development
 ```bash
 sudo apt install g++ make binutils cmake libboost-system-dev libssl-dev zlib1g-dev libcurl4-openssl-dev traceroute bc tcptraceroute whois
+```
+
+## Production
+```bash
+sudo apt install traceroute bc tcptraceroute whois
 ```
 
 > [!Important]

@@ -1,0 +1,72 @@
+name: Build and Release
+
+on:
+  push:
+    # branches:
+    #   - main
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, arm64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo dpkg --add-architecture arm64
+          sudo tee /etc/apt/sources.list.d/ports.list <<EOF
+            deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main restricted universe multiverse
+            deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted universe multiverse
+            deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted universe multiverse
+            deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-backports main restricted universe multiverse
+          EOF
+          sudo apt-get update -o APT::Architectures="amd64 arm64"
+          case "${{ matrix.arch }}" in
+            x86_64)
+              sudo apt-get install -y --no-install-recommends \
+                g++ make binutils cmake \
+                libboost-system-dev libssl-dev zlib1g-dev libcurl4-openssl-dev
+              ;;
+            arm64)
+              sudo apt-get install -y --no-install-recommends \
+                g++-aarch64-linux-gnu binutils-aarch64-linux-gnu crossbuild-essential-arm64 \
+                libboost-system-dev:arm64 libssl-dev:arm64 zlib1g-dev:arm64 libcurl4-openssl-dev:arm64
+              ;;
+          esac
+
+      - name: Configure with CMake
+        run: |
+          case "${{ matrix.arch }}" in
+            x86_64)
+              cmake -B build -DCMAKE_BUILD_TYPE=Release 
+              ;;
+            arm64)
+              cmake -B build -DCMAKE_BUILD_TYPE=Release \
+                    -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+                    -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+                    -DCMAKE_PREFIX_PATH=/usr/lib/aarch64-linux-gnu 
+              ;;
+          esac
+
+      - name: Build
+        run: cmake --build build --config Release -j$(nproc || echo 2)
+
+      - name: Package binary
+        run: |
+          cd build
+          tar czvf ../lg-tgbot_${{ github.ref_name }}-${{ matrix.arch }}.tar.gz lg-tgbot
+          tar czvf ../lg-tgbot-agent_${{ github.ref_name }}-${{ matrix.arch }}.tar.gz lg-tgbot-agent
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "*.tar.gz"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

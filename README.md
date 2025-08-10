@@ -15,6 +15,16 @@ sudo apt install traceroute bc tcptraceroute whois
 > [!Important]
 > You need to install `tcping` manually.
 
+# Install
+## Master
+```bash
+curl https://raw.githubusercontent.com/KaguraiYoRoy/lg-tgbot/refs/heads/main/installer.sh > installer.sh && chmod +x installer.sh && sudo ./installer.sh install master 
+```
+## Agent
+```bash
+curl https://raw.githubusercontent.com/KaguraiYoRoy/lg-tgbot/refs/heads/main/installer.sh > installer.sh && chmod +x installer.sh && sudo ./installer.sh install agent
+```
+
 # Config Sample
 ## Master
 ```json
@@ -82,3 +92,13 @@ _Parameter which has a **default** value is **optional**._
 | OFF | 6 |
 
 To disable log record, please set level to `OFF`.  
+
+# Uninstall
+## Master
+```bash
+curl https://raw.githubusercontent.com/KaguraiYoRoy/lg-tgbot/refs/heads/main/installer.sh > installer.sh && chmod +x installer.sh && sudo ./installer.sh uninstall master
+```
+## Agent
+```bash
+curl https://raw.githubusercontent.com/KaguraiYoRoy/lg-tgbot/refs/heads/main/installer.sh > installer.sh && chmod +x installer.sh && sudo ./installer.sh uninstall agent
+```

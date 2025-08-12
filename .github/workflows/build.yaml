@@ -64,9 +64,24 @@ jobs:
           tar czvf ../lg-tgbot_${{ matrix.arch }}.tar.gz lg-tgbot
           tar czvf ../lg-tgbot-agent_${{ matrix.arch }}.tar.gz lg-tgbot-agent
 
-      - name: Upload to Release
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.arch }}
+          path: "*.tar.gz"
+
+  release:
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: "*.tar.gz"
+          files: "artifacts/**/*.tar.gz"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

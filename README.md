@@ -1,6 +1,9 @@
 # lg-tgbot
 A simple Looking-Glass for BIRD2 based on Telegram Bot
 
+> [!Caution]
+> The current project contains severe security vulnerabilities that could lead to critical issues such as RCE; it has been deprecated, and you should choose a more mature project.
+
 # Require
 ## Development
 ```bash
